@@ -4,11 +4,18 @@ module RPNCalculator
 
   def calculate_rpn_automata(input : String)
     stack = [] of Float64
-    ops = ['+', '-', '/', '*', '%']
+    ops_hash = {
+      "+": ->(a : Float64, b : Float64) { a + b },
+      "-": ->(a : Float64, b : Float64) { a - b },
+      "*": ->(a : Float64, b : Float64) { a * b },
+      "/": ->(a : Float64, b : Float64) { a / b },
+      "%": ->(a : Float64, b : Float64) { a % b },
+    }
 
     input.split.each do |i|
-      stack << ((ops.includes? i) ? stack.pop.send(i, stack.pop.to_f) : i.to_f)
+      stack << ((ops_hash.fetch(i, false)) ? ops_hash[i].call(stack.pop.to_f, stack.pop.to_f) : i.to_f)
     end
     stack.pop # or stack[0]
   end
 end
+
