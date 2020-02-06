@@ -37,8 +37,6 @@ module RPNCalculator
 
     is_negative_sign = true
     input.chars.each_with_index do |token, index| # add support for negative numbers
-      puts "Token: #{token}"
-      puts "Before - during loop\nOutput stack: #{output_stack}, Num stack: #{num_stack}, OP Stack: #{op_stack}"
       next if token.whitespace?
       next num_stack << token if token.to_i? || token == '.'
 
@@ -64,7 +62,6 @@ module RPNCalculator
               end
             end
           end
-          p "Hi again"
           op_stack << token
           is_negative_sign = true
         end
@@ -84,11 +81,8 @@ module RPNCalculator
         p ops_hash.fetch(token, false)
         return "Not supported yet #{token}"
       end
-      puts "After - during loop\nOutput stack: #{output_stack}, Num stack: #{num_stack}, OP Stack: #{op_stack}"
     end
     output_stack << num_stack.join unless num_stack.empty?
-
-    puts "After loop\nOutput stack: #{output_stack}, Num stack: #{num_stack}, OP Stack: #{op_stack}"
 
     until op_stack.empty?
       raise "Parentheses Error: Missing ')' at the end!" if op_stack.last == '('
