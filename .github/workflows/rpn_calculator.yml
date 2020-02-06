@@ -12,9 +12,7 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
-    - name: Go to folder
-      run: cd rpn-calculator
     - name: Install dependencies
-      run: shards install
+      run: cd rpn-calculator && shards init && shards install
     - name: Run tests
       run: crystal spec
