@@ -108,6 +108,6 @@ module RPNCalculator
   end
 end
 
-include RPNCalculator
-
-repl
+# TODO: Try to find a way to allow specs/tests without calling repl
+# include RPNCalculator
+# repl
