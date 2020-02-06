@@ -89,13 +89,18 @@ module RPNCalculator
       output_stack << op_stack.pop.to_s
     end
 
-    output_stack
+    output_stack.join(' ')
   end
 
   def repl
-    until ["abort", "exit", "quit", "q"].includes?(input = Readline.readline("> "))
-      #      p calculate_rpn_automata(input || "")
-      p do_shunting_yard(input || "")
+    until ["abort", "exit", "quit", "q"].includes?(input = Readline.readline("> ") || "")
+      if input.strip.empty?
+        next
+      elsif (['+', '-', '*', '/', '%'].includes? input[-1]) && input.strip.size != 1
+        p calculate_rpn_automata(input || "")
+      else
+        p calculate_rpn_automata do_shunting_yard(input || "")
+      end
     end
   end
 end
