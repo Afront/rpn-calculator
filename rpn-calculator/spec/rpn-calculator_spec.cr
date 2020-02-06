@@ -1,5 +1,7 @@
 require "./spec_helper"
 
+include RPNCalculator
+
 describe RPNCalculator do
   # TODO: Write tests
   describe "#calculate_rpn_automata" do
