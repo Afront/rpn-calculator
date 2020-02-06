@@ -19,3 +19,7 @@ module RPNCalculator
   end
 end
 
+include RPNCalculator
+
+require "readline"
+p calculate_rpn_automata(Readline.readline("> ") || "")

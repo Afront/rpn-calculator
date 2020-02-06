@@ -8,6 +8,10 @@ targets:
   rpn-calculator:
     main: src/rpn-calculator.cr
 
+dependencies:
+  readline:
+    github: crystal-lang/crystal-readline
+
 crystal: 0.32.1
 
-license: MIT
+license: MIT | APACHE2
