@@ -7,11 +7,11 @@ module RPNCalculator
   def calculate_rpn_automata(input : String) : Float64
     stack = [] of Float64
     ops_hash = {
-      "+": ->(a : Float64, b : Float64) { a + b },
-      "-": ->(a : Float64, b : Float64) { a - b },
-      "*": ->(a : Float64, b : Float64) { a * b },
-      "/": ->(a : Float64, b : Float64) { a / b },
-      "%": ->(a : Float64, b : Float64) { a % b },
+      "+": ->(b : Float64, a : Float64) { a + b },
+      "-": ->(b : Float64, a : Float64) { a - b },
+      "*": ->(b : Float64, a : Float64) { a * b },
+      "/": ->(b : Float64, a : Float64) { a / b },
+      "%": ->(b : Float64, a : Float64) { a % b },
     }
 
     input.split.each do |i|
@@ -90,6 +90,9 @@ module RPNCalculator
     end
 
     output_stack.join(' ')
+  end
+
+  def do_shunting_yard_after_scanning(input : String)
   end
 
   def repl
