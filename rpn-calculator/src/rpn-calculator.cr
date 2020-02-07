@@ -1,21 +1,24 @@
 require "readline"
 
-# TODO: Write documentation for `RpnCalculator`
+# RPNCalculator is a calculator that uses the postfix notation.
+# It also accepts expressions that uses the infix notation via the shunting yard algorithm
 module RPNCalculator
   VERSION = "0.1.0"
 
+  OPS_HASH = {
+    '+' => {:precedence => 1, :associativity => :left, :proc => ->(b : Float64, a : Float64) { a + b }},
+    '-' => {:precedence => 1, :associativity => :left, :proc => ->(b : Float64, a : Float64) { a - b }},
+    '*' => {:precedence => 2, :associativity => :left, :proc => ->(b : Float64, a : Float64) { a * b }},
+    '/' => {:precedence => 2, :associativity => :left, :proc => ->(b : Float64, a : Float64) { a / b }},
+    '%' => {:precedence => 2, :associativity => :left, :proc => ->(b : Float64, a : Float64) { a % b }},
+  }
+
   def calculate_rpn_automata(input : String) : Float64
     stack = [] of Float64
-    ops_hash = {
-      "+": ->(b : Float64, a : Float64) { a + b },
-      "-": ->(b : Float64, a : Float64) { a - b },
-      "*": ->(b : Float64, a : Float64) { a * b },
-      "/": ->(b : Float64, a : Float64) { a / b },
-      "%": ->(b : Float64, a : Float64) { a % b },
-    }
 
-    input.split.each do |i|
-      stack << (ops_hash.fetch(i, false) ? ops_hash[i].call(stack.pop.to_f, stack.pop.to_f) : i.to_f)
+    input.split.each do |token|
+      op = token.chars.last
+      stack << (OPS_HASH.fetch(op, false) ? OPS_HASH[op][:proc].as(Proc(Float64, Float64, Float64)).call(stack.pop.to_f, stack.pop.to_f) : token.to_f)
     end
     stack.pop # or stack[0]
   end
@@ -27,13 +30,6 @@ module RPNCalculator
     output_stack = [] of String
     op_stack = [] of Char
     num_stack = [] of Char
-    ops_hash = {
-      '+' => {:precedence => 1, :associativity => :left},
-      '-' => {:precedence => 1, :associativity => :left},
-      '*' => {:precedence => 2, :associativity => :left},
-      '/' => {:precedence => 2, :associativity => :left},
-      '%' => {:precedence => 2, :associativity => :left},
-    }
 
     is_negative_sign = true
     input.chars.each_with_index do |token, index| # add support for negative numbers
@@ -46,15 +42,15 @@ module RPNCalculator
         num_stack.clear
       end
 
-      if ops_hash.fetch(token, false)
+      if OPS_HASH.fetch(token, false)
         if is_negative_sign
           num_stack.insert(0, '-')
         else
           unless op_stack.empty?
             unless op_stack.last == '('
-              top_precedence = ops_hash[op_stack.last][:precedence].to_i
-              tkn_precedence = ops_hash[token][:precedence].to_i
-              tkn_associativity = ops_hash[token][:associativity]
+              top_precedence = OPS_HASH[op_stack.last][:precedence].as(Int32)
+              tkn_precedence = OPS_HASH[token][:precedence].as(Int32)
+              tkn_associativity = OPS_HASH[token][:associativity].as(Symbol)
               while (op_stack.last != '(') ||
                     (top_precedence > tkn_precedence) ||
                     (top_precedence == tkn_precedence && tkn_associativity == :left) &&
@@ -78,7 +74,7 @@ module RPNCalculator
         is_negative_sign = false
       else
         p token.to_f?
-        p ops_hash.fetch(token, false)
+        p OPS_HASH.fetch(token, false)
         return "Not supported yet #{token}"
       end
     end
@@ -109,5 +105,5 @@ module RPNCalculator
 end
 
 # TODO: Try to find a way to allow specs/tests without calling repl
-# include RPNCalculator
-# repl
+include RPNCalculator
+repl
