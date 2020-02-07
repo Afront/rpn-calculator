@@ -1,18 +1,40 @@
 # rpn-calculator
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](../LICENSE-APACHE)
+[![License](https://img.shields.io/badge/License-MIT-blue.svg)](../LICENSE-MIT)
 
-TODO: Write a description here
+This project is a calculator that can parse both RPN and infix expressions. 
+It uses the shunting yard algorithm to transpile infix expressions into RPN expressions.
+Then, it uses a stack machine to get the result of the RPN expression.
 
-## Installation
+## Getting Started
+These are the steps to quickly deploy this app.
 
-TODO: Write installation instructions here
+### Prerequisites
+
+The programming language used for this project is [Crystal](https://crystal-lang.org), which means an Linux environment is needed in order to compile the code.
+[Readline](https://tiswww.case.edu/php/chet/readline/rltop.html) has to be installed to the Linux environment as well in order to compile the code..
+
+### Installing
+
+Refer to the [Development](#development) section for more information.
+Binary releases will be added in the future to the GitHub repo.
 
 ## Usage
 
 TODO: Write usage instructions here
+So far, only REPL is supported for the calculator. Support for command-line arguments is planned.
 
 ## Development
 
-TODO: Write development instructions here
+After checking out the repo, run `shards install` to install the necessary dependencies. Then, run `crystal spec` to run the tests.
+
+```bash
+git clone https://github.com/Afront/Project-Pebbles.git
+cd Project-Pebbles/rpn-calculator
+shards install
+crystal build
+./bin/crystal
+```
 
 ## Contributing
 
@@ -22,6 +44,9 @@ TODO: Write development instructions here
 4. Push to the branch (`git push origin my-new-feature`)
 5. Create a new Pull Request
 
-## Contributors
+## License
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE-APACHE)
+[![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE-MIT)
 
-- [Afront](https://github.com/your-github-user) - creator and maintainer
+This project is dual-licensed under Apache 2.0 and the MIT license.
+
