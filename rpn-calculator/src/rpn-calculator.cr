@@ -13,6 +13,10 @@ module RPNCalculator
     '%' => {:precedence => 2, :associativity => :left, :proc => ->(b : Float64, a : Float64) { a % b }},
   }
 
+  # Calculates the result based on the *input* expression given
+  # ```
+  # calculate_rpn_automata("1 2 +") # => 3
+  # ```
   def calculate_rpn_automata(input : String) : Float64
     stack = [] of Float64
 
@@ -23,9 +27,13 @@ module RPNCalculator
     stack.pop # or stack[0]
   end
 
-  def compare_precedence?(token, top)
-  end
+  #  def compare_precedence?(token, top)
+  #  end
 
+  # Converts the given *input* expression into a postfix notation expression
+  # ```
+  # do_shunting_yard("1+2") # => "1 2 +"
+  # ```
   def do_shunting_yard(input : String)
     output_stack = [] of String
     op_stack = [] of Char
@@ -88,9 +96,24 @@ module RPNCalculator
     output_stack.join(' ')
   end
 
-  def do_shunting_yard_after_scanning(input : String)
+  # Does the same thing as `RPNCalculator#do_shunting_yard`, but its input is a scanned symbol stack
+  # ```
+  # do_shunting_yard_after_scanning(scan("1+2")) # => "1 2 +"
+  # ```
+  def do_shunting_yard_after_scanning(symbol_stack : Array)
   end
 
+  # Scans the expression and gives a symbol stack as its output
+  # ```
+  # scan("134+---2") => ["134", "+", "-2"]
+  # ```
+  def scan(input : String)
+  end
+
+  # Is an interactive prompt that allows users to get the results of any legal expresssion
+  # ```
+  # repl # => >
+  # ```
   def repl
     until ["abort", "exit", "quit", "q"].includes?(input = Readline.readline("> ") || "")
       if input.strip.empty?
