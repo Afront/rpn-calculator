@@ -76,7 +76,6 @@ module RPNCalculator
         while op_stack.last != '('
           output_stack << op_stack.pop.to_s
         end
-        # Add actual error if operator stack is empty
         raise "Parentheses Error: Missing '(' to match the ')' @ column #{index + 1}!" if op_stack.empty?
         op_stack.pop if op_stack.last == '('
         is_negative_sign = false
