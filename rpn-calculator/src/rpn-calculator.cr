@@ -80,8 +80,6 @@ module RPNCalculator
         op_stack.pop if op_stack.last == '('
         is_negative_sign = false
       else
-        p token.to_f?
-        p OPS_HASH.fetch(token, false)
         return "Not supported yet #{token}"
       end
     end
