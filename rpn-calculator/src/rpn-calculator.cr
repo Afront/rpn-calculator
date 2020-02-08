@@ -59,11 +59,10 @@ module RPNCalculator
               top_precedence = OPS_HASH[op_stack.last][:precedence].as(Int32)
               tkn_precedence = OPS_HASH[token][:precedence].as(Int32)
               tkn_associativity = OPS_HASH[token][:associativity].as(Symbol)
-              while !(op_stack.empty?) || (op_stack.last != '(') ||
+              while !(op_stack.empty?) && ((op_stack.last != '(') ||
                     (top_precedence > tkn_precedence) ||
-                    (top_precedence == tkn_precedence && tkn_associativity == :left)
+                    (top_precedence == tkn_precedence && tkn_associativity == :left))
                 output_stack << op_stack.pop.to_s
-                break if op_stack.empty?
               end
             end
           end
