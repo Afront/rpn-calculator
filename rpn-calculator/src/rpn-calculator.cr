@@ -43,7 +43,7 @@ module RPNCalculator
     num_stack = [] of Char
 
     is_negative_sign = true
-    input.chars.each_with_index do |token, index| # add support for negative numbers
+    input.chars.each_with_index do |token, index|
       next if token.whitespace?
       next num_stack << token if token.to_i? || token == '.'
 
