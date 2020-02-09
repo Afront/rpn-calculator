@@ -198,13 +198,53 @@ module RPNCalculator
   # do_shunting_yard_after_scanning(scan("1+2")) # => "1 2 +"
   # ```
   def do_shunting_yard_after_scanning(symbol_stack : Array)
+  enum States
+    Start
+    PositiveSign
+    NegativeSign
+    Number
+    Operator
+    Error
   end
 
   # Scans the expression and gives a symbol stack as its output
   # ```
-  # scan("134+---2") => ["134", "+", "-2"]
+  # scan("134+---2") => [Token(134), Token('+'), Token(-2)]
   # ```
-  def scan(input : String)
+  def scan(input : String) : Array(Token)
+    symbol_stack = [] of Token
+    state = States::Start # states: Start,
+    input.chars.each do |token|
+      case state
+      when States::Start
+        state = States::Error
+        state = States::PositiveSign if token == '+'
+        state = States::NegativeSign if token == '-'
+        state = States::Number if token.to_i?
+      when States::PositiveSign
+        state = States::Error
+        state = States::PositiveSign if token == '+'
+        state = States::Number if token.to_i?
+      when States::NegativeSign
+        state = States::Error
+        state = States::NegativeSign if token == '-'
+        state = States::Number if token.to_i?
+      when States::Number
+        state = States::Error
+        state = States::Operator if ['+', '-', '/', '*'].includes? token
+        state = States::Number if token.to_i?
+      when States::Operator
+        state = States::Error
+        state = States::PositiveSign if token == '+'
+        state = States::NegativeSign if token == '-'
+        state = States::Number if token.to_i?
+      when States::Error
+        raise "*insert error here*"
+      end
+    end
+
+    raise "Not accepted" unless [States::Start, States::Number].includes? state
+    [Token.new(1)]
   end
 
   # Is an interactive prompt that allows users to get the results of any legal expresssion
