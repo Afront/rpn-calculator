@@ -22,8 +22,11 @@ module RPNCalculator
 
     input.split.each do |token|
       op = token.chars.last
-      stack << (OPS_HASH.fetch(op, false) ? OPS_HASH[op][:proc].as(Proc(Float64, Float64, Float64)).call(stack.pop.to_f, stack.pop.to_f) : token.to_f)
+      raise DivisionByZeroError.new("Error: Attempted dividing by zero") if op == '/' && stack.last == 0
+      raise ArgumentError.new("Error: Not enough arguments!") if (is_op = OPS_HASH.fetch(op, false)) && stack.size < 2
+      stack << (is_op ? OPS_HASH[op][:proc].as(Proc(Float64, Float64, Float64)).call(stack.pop.to_f, stack.pop.to_f) : token.to_f)
     end
+    raise ArgumentError.new("Error: Missing operator!") if stack.size > 1
     stack.pop # or stack[0]
   end
 
