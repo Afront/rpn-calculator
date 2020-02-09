@@ -115,7 +115,7 @@ module RPNCalculator
   # repl # => >
   # ```
   def repl
-    until ["abort", "exit", "quit", "q"].includes?(input = Readline.readline("> ") || "")
+    until ["abort", "exit", "quit", "q"].includes?(input = Readline.readline(prompt: "> ", add_history: true) || "")
       if input.strip.empty?
         next
       elsif (['+', '-', '*', '/', '%'].includes? input[-1]) && input.strip.size != 1
