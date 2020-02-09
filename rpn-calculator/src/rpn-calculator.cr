@@ -29,10 +29,13 @@ module RPNCalculator
     # Token.type(1) = :number
     # Token.type("1") = :number
     # Token.type("+") = :operator
-    # Token.type("ahhh") = :unkown
+    # Token.type("ahhh") = :unknown
     # ```
     def type
-      if OPS_HASH.fetch(token.to_s.chars.last, false)
+      # NOTE: The last character is used to remove ambiguity between a negative number and the minus sign
+      # It's possible to move the number statement to the top if one wants to read the first instead of the last character
+      # But it could lead to some problems
+      if OPS_HASH.fetch(token.to_s.char_at(-1), false)
         :operator
       elsif token == "start"
         :start
@@ -52,7 +55,7 @@ module RPNCalculator
     stack = [] of Float64
 
     input.split.each do |token|
-      op = token.chars.last
+      op = token.char_at(0)
       raise DivisionByZeroError.new("Error: Attempted dividing by zero") if op == '/' && stack.last == 0
       raise ArgumentError.new("Error: Not enough arguments!") if (is_op = OPS_HASH.fetch(op, false)) && stack.size < 2
       stack << (is_op ? OPS_HASH[op][:proc].as(Proc(Float64, Float64, Float64)).call(stack.pop.to_f, stack.pop.to_f) : token.to_f)
@@ -101,7 +104,7 @@ module RPNCalculator
           if first_arg.type == :start
             state = :only_one_argument
           else
-            stack << Token.new(OPS_HASH[token.chars.last][:proc].as(Proc(Float64, Float64, Float64)).call(second_arg.token.to_f, first_arg.token.to_f))
+            stack << Token.new(OPS_HASH[token.char_at(0)][:proc].as(Proc(Float64, Float64, Float64)).call(second_arg.token.to_f, first_arg.token.to_f))
             state = :no_op_yet
           end
           continue = true
@@ -153,6 +156,7 @@ module RPNCalculator
       if OPS_HASH.fetch(token, false)
         if is_negative_sign
           num_stack.insert(0, '-')
+          p "is_neg", is_negative_sign, num_stack, output_stack, op_stack
         else
           unless op_stack.empty?
             unless op_stack.last == '('
@@ -169,6 +173,7 @@ module RPNCalculator
           op_stack << token
           is_negative_sign = true
         end
+        p "is_op", is_negative_sign, num_stack, output_stack, op_stack
       elsif token == '('
         op_stack << '('
         is_negative_sign = true
@@ -182,6 +187,69 @@ module RPNCalculator
       else
         return "Not supported yet #{token}"
       end
+      p output_stack
+    end
+    output_stack << num_stack.join unless num_stack.empty?
+
+    until op_stack.empty?
+      raise "Parentheses Error: Missing ')' at the end!" if op_stack.last == '('
+      output_stack << op_stack.pop.to_s
+    end
+
+    output_stack.join(' ')
+  end
+
+  def do_shunting_yard_old(input : String)
+    output_stack = [] of String
+    op_stack = [] of Char
+    num_stack = [] of Char
+
+    is_negative_sign = true
+    input.chars.each_with_index do |token, index|
+      next if token.whitespace?
+      next num_stack << token if token.to_i? || token == '.'
+
+      unless num_stack.empty?
+        output_stack << num_stack.join
+        is_negative_sign = false
+        num_stack.clear
+      end
+
+      if OPS_HASH.fetch(token, false)
+        if is_negative_sign
+          num_stack.insert(0, '-')
+          p "is_neg", is_negative_sign, num_stack, output_stack, op_stack
+        else
+          unless op_stack.empty?
+            unless op_stack.last == '('
+              top_precedence = OPS_HASH[op_stack.last][:precedence].as(Int32)
+              tkn_precedence = OPS_HASH[token][:precedence].as(Int32)
+              tkn_associativity = OPS_HASH[token][:associativity].as(Symbol)
+              while !(op_stack.empty?) && (op_stack.last != '(') &&
+                    ((top_precedence > tkn_precedence) ||
+                    (top_precedence == tkn_precedence && tkn_associativity == :left))
+                output_stack << op_stack.pop.to_s
+              end
+            end
+          end
+          op_stack << token
+          is_negative_sign = true
+        end
+        p "is_op", is_negative_sign, num_stack, output_stack, op_stack
+      elsif token == '('
+        op_stack << '('
+        is_negative_sign = true
+      elsif token == ')'
+        while op_stack.last != '('
+          output_stack << op_stack.pop.to_s
+        end
+        raise "Parentheses Error: Missing '(' to match the ')' @ column #{index + 1}!" if op_stack.empty?
+        op_stack.pop if op_stack.last == '('
+        is_negative_sign = false
+      else
+        return "Not supported yet #{token}"
+      end
+      p output_stack
     end
     output_stack << num_stack.join unless num_stack.empty?
 
@@ -198,6 +266,67 @@ module RPNCalculator
   # do_shunting_yard_after_scanning(scan("1+2")) # => "1 2 +"
   # ```
   def do_shunting_yard_after_scanning(symbol_stack : Array)
+    output_stack = [] of String
+    op_stack = [] of Char
+    num_stack = [] of Char
+
+    is_negative_sign = true
+    input.chars.each_with_index do |token, index|
+      next if token.whitespace?
+      next num_stack << token if token.to_i? || token == '.'
+
+      unless num_stack.empty?
+        output_stack << num_stack.join
+        is_negative_sign = false
+        num_stack.clear
+      end
+
+      if OPS_HASH.fetch(token, false)
+        if is_negative_sign
+          num_stack.insert(0, '-')
+          p "is_neg", is_negative_sign, num_stack, output_stack, op_stack
+        else
+          unless op_stack.empty?
+            unless op_stack.last == '('
+              top_precedence = OPS_HASH[op_stack.last][:precedence].as(Int32)
+              tkn_precedence = OPS_HASH[token][:precedence].as(Int32)
+              tkn_associativity = OPS_HASH[token][:associativity].as(Symbol)
+              while !(op_stack.empty?) && (op_stack.last != '(') &&
+                    ((top_precedence > tkn_precedence) ||
+                    (top_precedence == tkn_precedence && tkn_associativity == :left))
+                output_stack << op_stack.pop.to_s
+              end
+            end
+          end
+          op_stack << token
+          is_negative_sign = true
+        end
+        p "is_op", is_negative_sign, num_stack, output_stack, op_stack
+      elsif token == '('
+        op_stack << '('
+        is_negative_sign = true
+      elsif token == ')'
+        while op_stack.last != '('
+          output_stack << op_stack.pop.to_s
+        end
+        raise "Parentheses Error: Missing '(' to match the ')' @ column #{index + 1}!" if op_stack.empty?
+        op_stack.pop if op_stack.last == '('
+        is_negative_sign = false
+      else
+        return "Not supported yet #{token}"
+      end
+      p output_stack
+    end
+    output_stack << num_stack.join unless num_stack.empty?
+
+    until op_stack.empty?
+      raise "Parentheses Error: Missing ')' at the end!" if op_stack.last == '('
+      output_stack << op_stack.pop.to_s
+    end
+
+    output_stack.join(' ')
+  end
+
   enum States
     Start
     PositiveSign
@@ -253,12 +382,19 @@ module RPNCalculator
   # ```
   def repl
     until ["abort", "exit", "quit", "q"].includes?(input = Readline.readline(prompt: "> ", add_history: true) || "")
-      if input.strip.empty?
-        next
-      elsif (['+', '-', '*', '/', '%'].includes? input[-1]) && input.strip.size != 1
-        p calculate_rpn_automata(input || "")
-      else
-        p calculate_rpn_automata do_shunting_yard(input || "")
+      begin
+        if input.strip.empty?
+          next
+        elsif (['+', '-', '*', '/', '%'].includes? input[-1]) && input.strip.size != 1
+          p calculate_rpn_automata(input || "")
+        else
+          p scan input
+          # p do_shunting_yard(input || "")
+          # p "Hi"
+          # p calculate_rpn_automata do_shunting_yard(input || "")
+        end
+      rescue e : Exception
+        p e
       end
     end
   end
