@@ -13,11 +13,43 @@ module RPNCalculator
     '%' => {:precedence => 2, :associativity => :left, :proc => ->(b : Float64, a : Float64) { a % b }},
   }
 
+  # Contains the token for the symbol stack
+  class Token
+    property token
+
+    # Creates a new object with the class 'Token'
+    # ```
+    # Token.new("start") => #<RPNCalculator::Token:??? @token="start">
+    # ```
+    def initialize(@token : Float64 | String)
+    end
+
+    # Gives the type of the token
+    # ```
+    # Token.type(1) = :number
+    # Token.type("1") = :number
+    # Token.type("+") = :operator
+    # Token.type("ahhh") = :unkown
+    # ```
+    def type
+      if OPS_HASH.fetch(token.to_s.chars.last, false)
+        :operator
+      elsif token == "start"
+        :start
+      elsif token.class == Float64 || token.to_s.to_f?
+        :number
+      else
+        :unknown
+      end
+    end
+  end
+
   # Calculates the result based on the *input* expression given
   # ```
-  # calculate_rpn_automata("1 2 +") # => 3
+  # calculate_rpn("1 2 +") # => 3
   # ```
-  def calculate_rpn_automata(input : String) : Float64
+  def calculate_rpn(input : String) : Float64
+    p input
     stack = [] of Float64
 
     input.split.each do |token|
@@ -28,6 +60,76 @@ module RPNCalculator
     end
     raise ArgumentError.new("Error: Missing operator!") if stack.size > 1
     stack.pop # or stack[0]
+  end
+
+  # Calculates the result based on the *input* expression given using a DPDA-like stack machine.
+  # ```
+  # calculate_rpn_automata("1 2 +") # => 3
+  # ```
+  def calculate_rpn_automata(input : String | Array) : Float64
+    input = input.split if input.class == String
+    stack = [Token.new("start")]
+    state = :no_op_yet
+    input.as(Array).each do |token|
+      continue = true
+      should_be_true = false
+      p token
+      until continue && should_be_true
+        should_be_true = true
+        case state
+        when :no_op_yet
+          case (symbol = Token.new(token)).type
+          when :number
+            stack << symbol
+          when :operator
+            case stack.last.type
+            when :start
+              state = :only_an_operator
+              continue = false
+            when :number
+              state = :op_captured
+              p token, stack.last.token
+              state = :division_by_zero if stack.last.token.to_i == 0 && token == "/"
+              continue = false
+            else
+              raise "Unknown Error!"
+            end
+          when :unknown # or else
+            p token, "woah"
+            state = :unknown_token
+            continue = false
+          end
+        when :op_captured
+          second_arg = stack.pop
+          first_arg = stack.pop
+          if first_arg.type == :start
+            state = :only_one_argument
+          else
+            stack << Token.new(OPS_HASH[token.chars.last][:proc].as(Proc(Float64, Float64, Float64)).call(second_arg.token.to_f, first_arg.token.to_f))
+            state = :no_op_yet
+          end
+          continue = true
+        when :unknown_token
+          continue = true
+          raise ArgumentError.new "Unknown Token: #{token}"
+        when :division_by_zero
+          continue = true
+          raise ArgumentError.new "Attempted dividing by zero!"
+        when :only_an_operator
+          continue = true
+          raise ArgumentError.new "Missing arguments for the operator #{stack}"
+        when :only_one_argument
+          continue = true
+          raise ArgumentError.new "Missing one argument for the operator #{token}!"
+        else
+          raise "Unknown Error: #{stack}, #{token}"
+        end
+      end
+    end
+    # 2 * 1 +
+
+    raise "Unknown Error!: #{stack}" if stack.size != 2
+    stack.pop.token.to_f # or stack[0]
   end
 
   #  def compare_precedence?(token, top)
