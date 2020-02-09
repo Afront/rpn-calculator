@@ -49,7 +49,6 @@ module RPNCalculator
   # calculate_rpn("1 2 +") # => 3
   # ```
   def calculate_rpn(input : String) : Float64
-    p input
     stack = [] of Float64
 
     input.split.each do |token|
@@ -73,7 +72,6 @@ module RPNCalculator
     input.as(Array).each do |token|
       continue = true
       should_be_true = false
-      p token
       until continue && should_be_true
         should_be_true = true
         case state
@@ -88,14 +86,12 @@ module RPNCalculator
               continue = false
             when :number
               state = :op_captured
-              p token, stack.last.token
               state = :division_by_zero if stack.last.token.to_i == 0 && token == "/"
               continue = false
             else
               raise "Unknown Error!"
             end
           when :unknown # or else
-            p token, "woah"
             state = :unknown_token
             continue = false
           end
@@ -126,7 +122,6 @@ module RPNCalculator
         end
       end
     end
-    # 2 * 1 +
 
     raise "Unknown Error!: #{stack}" if stack.size != 2
     stack.pop.token.to_f # or stack[0]
