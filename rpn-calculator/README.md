@@ -12,8 +12,7 @@ These are the steps to quickly deploy this app.
 ### Prerequisites
 
 The programming language used for this project is [Crystal](https://crystal-lang.org), which means an Linux environment is needed in order to compile the code.
-[Readline](https://tiswww.case.edu/php/chet/readline/rltop.html) has to be installed to the Linux environment as well in order to compile the code..
-
+[Readline](https://tiswww.case.edu/php/chet/readline/rltop.html) and [PCRE](https://www.pcre.org/) have to be installed to the Linux environment as well in order to compile the code.
 ### Installing
 
 Refer to the [Development](#development) section for more information.
