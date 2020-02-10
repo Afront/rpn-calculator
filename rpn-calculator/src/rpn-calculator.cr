@@ -333,7 +333,101 @@ module RPNCalculator
     NegativeSign
     Number
     Operator
+    Whitespace
     Error
+  end
+
+  # Scans the expression and gives a symbol stack as its output
+  # ```
+  # scan("134+---2") => [Token(134), Token('+'), Token(-2)]
+  # ```
+  def get_next_state(state : States, token : Char) : States
+    case state
+    when States::Start
+      state = case token
+              when '+'
+                States::PositiveSign
+              when '-'
+                States::NegativeSign
+              else
+                if token.whitespace?
+                  States::Whitespace
+                elsif token.to_i?
+                  States::Number
+                else
+                  States::Error
+                end
+              end
+    when States::PositiveSign
+      state = case token
+              when '+'
+                States::PositiveSign
+              else
+                if token.whitespace?
+                  States::Whitespace
+                elsif token.to_i?
+                  States::Number
+                else
+                  States::Error
+                end
+              end
+    when States::NegativeSign
+      state = case token
+              when '-'
+                States::NegativeSign
+              else
+                if token.whitespace?
+                  States::Whitespace
+                elsif token.to_i?
+                  States::Number
+                else
+                  States::Error
+                end
+              end
+    when States::Number
+      state = if ['+', '-', '/', '*'].includes? token
+                States::Operator
+              elsif token.whitespace?
+                States::Whitespace
+              elsif token.to_i?
+                States::Number
+              else
+                States::Error
+              end
+    when States::Operator
+      state = case token
+              when '+'
+                States::PositiveSign
+              when '-'
+                States::NegativeSign
+              else
+                if token.whitespace?
+                  States::Whitespace
+                elsif token.to_i?
+                  States::Number
+                else
+                  States::Error
+                end
+              end
+    when States::Whitespace
+      state = case token
+              when '+'
+                States::PositiveSign
+              when '-'
+                States::NegativeSign
+              else
+                if token.whitespace?
+                  States::Whitespace
+                elsif token.to_i?
+                  States::Number
+                else
+                  States::Error
+                end
+              end
+    when States::Error
+      raise "*insert error here*"
+    end
+    state
   end
 
   # Scans the expression and gives a symbol stack as its output
@@ -342,38 +436,35 @@ module RPNCalculator
   # ```
   def scan(input : String) : Array(Token)
     symbol_stack = [] of Token
-    state = States::Start # states: Start,
+    num_token = [] of Char
+    is_negative = false
+    prev_token = nil
+    state = States::Start
     input.chars.each do |token|
-      case state
-      when States::Start
-        state = States::Error
-        state = States::PositiveSign if token == '+'
-        state = States::NegativeSign if token == '-'
-        state = States::Number if token.to_i?
+      p ["Before", "token", token, "symbol_stack", symbol_stack, "num_token", num_token, "state", state]
+      case state = get_next_state(state, token)
       when States::PositiveSign
-        state = States::Error
-        state = States::PositiveSign if token == '+'
-        state = States::Number if token.to_i?
+      when States::Whitespace
       when States::NegativeSign
-        state = States::Error
-        state = States::NegativeSign if token == '-'
-        state = States::Number if token.to_i?
+        is_negative ^= true # or is_negative != is_negative
       when States::Number
-        state = States::Error
-        state = States::Operator if ['+', '-', '/', '*'].includes? token
-        state = States::Number if token.to_i?
+        num_token << token
       when States::Operator
-        state = States::Error
-        state = States::PositiveSign if token == '+'
-        state = States::NegativeSign if token == '-'
-        state = States::Number if token.to_i?
-      when States::Error
-        raise "*insert error here*"
+        num_token.insert(0, '-') if is_negative
+        symbol_stack << Token.new(num_token.join.to_f)
+        num_token.clear
+        symbol_stack << Token.new(token.to_s)
       end
+      p ["After", "token", token, "symbol_stack", symbol_stack, "num_token", num_token, "state", state]
+    end
+
+    unless num_token.empty?
+      num_token.insert(0, '-') if is_negative
+      symbol_stack << Token.new(num_token.join.to_f)
     end
 
     raise "Not accepted" unless [States::Start, States::Number].includes? state
-    [Token.new(1)]
+    symbol_stack
   end
 
   # Is an interactive prompt that allows users to get the results of any legal expresssion
