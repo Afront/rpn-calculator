@@ -133,6 +133,19 @@ module RPNCalculator
   #  def compare_precedence?(token, top)
   #  end
 
+  class Number
+    property numbers, is_negative
+
+    def initialize
+      @numbers = [] of Char
+      @is_negative = false
+    end
+
+    def to_s : String
+      p (is_negative ? "-" : "") + numbers.join.to_s
+    end
+  end
+
   # Converts the given *input* expression into a postfix notation expression
   # ```
   # do_shunting_yard("1+2") # => "1 2 +"
@@ -140,23 +153,22 @@ module RPNCalculator
   def do_shunting_yard(input : String)
     output_stack = [] of String
     op_stack = [] of Char
-    num_stack = [] of Char
+    number = Number.new
+    dash_is_negative_sign = true
 
-    is_negative_sign = true
     input.chars.each_with_index do |token, index|
       next if token.whitespace?
-      next num_stack << token if token.to_i? || token == '.'
+      next number.numbers << token if token.to_i? || token == '.'
 
-      unless num_stack.empty?
-        output_stack << num_stack.join
-        is_negative_sign = false
-        num_stack.clear
+      unless number.numbers.empty?
+        output_stack << number.to_s
+        dash_is_negative_sign = false
+        number = Number.new
       end
 
       if OPS_HASH.fetch(token, false)
-        if is_negative_sign
-          num_stack.insert(0, '-')
-          p "is_neg", is_negative_sign, num_stack, output_stack, op_stack
+        if dash_is_negative_sign
+          number.is_negative ^= true
         else
           unless op_stack.empty?
             unless op_stack.last == '('
@@ -171,25 +183,24 @@ module RPNCalculator
             end
           end
           op_stack << token
-          is_negative_sign = true
+          dash_is_negative_sign = true
         end
-        p "is_op", is_negative_sign, num_stack, output_stack, op_stack
       elsif token == '('
         op_stack << '('
-        is_negative_sign = true
+        dash_is_negative_sign = true
       elsif token == ')'
         while op_stack.last != '('
           output_stack << op_stack.pop.to_s
         end
         raise "Parentheses Error: Missing '(' to match the ')' @ column #{index + 1}!" if op_stack.empty?
         op_stack.pop if op_stack.last == '('
-        is_negative_sign = false
+        dash_is_negative_sign = false
       else
         return "Not supported yet #{token}"
       end
       p output_stack
     end
-    output_stack << num_stack.join unless num_stack.empty?
+    output_stack << number.to_s unless number.numbers.empty?
 
     until op_stack.empty?
       raise "Parentheses Error: Missing ')' at the end!" if op_stack.last == '('
@@ -479,10 +490,9 @@ module RPNCalculator
         elsif (['+', '-', '*', '/', '%'].includes? input[-1]) && input.strip.size != 1
           p calculate_rpn_automata(input || "")
         else
-          p scan input
+          # p scan input
           # p do_shunting_yard(input || "")
-          # p "Hi"
-          # p calculate_rpn_automata do_shunting_yard(input || "")
+          p calculate_rpn_automata do_shunting_yard(input || "")
         end
       rescue e : Exception
         p e
