@@ -117,7 +117,8 @@ module RPNCalculator
   # ```
   # do_shunting_yard(scan("1+2")) # => "1 2 +"
   # ```
-  def do_shunting_yard(symbol_stack : Array)
+  def do_shunting_yard(input : String)
+    symbol_stack = scan(input)
     output_stack = [] of String
     op_stack = [] of Char
     num_stack = [] of Char
