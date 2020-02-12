@@ -210,68 +210,6 @@ module RPNCalculator
     output_stack.join(' ')
   end
 
-  def do_shunting_yard_old(input : String)
-    output_stack = [] of String
-    op_stack = [] of Char
-    num_stack = [] of Char
-
-    is_negative_sign = true
-    input.chars.each_with_index do |token, index|
-      next if token.whitespace?
-      next num_stack << token if token.to_i? || token == '.'
-
-      unless num_stack.empty?
-        output_stack << num_stack.join
-        is_negative_sign = false
-        num_stack.clear
-      end
-
-      if OPS_HASH.fetch(token, false)
-        if is_negative_sign
-          num_stack.insert(0, '-')
-          p "is_neg", is_negative_sign, num_stack, output_stack, op_stack
-        else
-          unless op_stack.empty?
-            unless op_stack.last == '('
-              top_precedence = OPS_HASH[op_stack.last][:precedence].as(Int32)
-              tkn_precedence = OPS_HASH[token][:precedence].as(Int32)
-              tkn_associativity = OPS_HASH[token][:associativity].as(Symbol)
-              while !(op_stack.empty?) && (op_stack.last != '(') &&
-                    ((top_precedence > tkn_precedence) ||
-                    (top_precedence == tkn_precedence && tkn_associativity == :left))
-                output_stack << op_stack.pop.to_s
-              end
-            end
-          end
-          op_stack << token
-          is_negative_sign = true
-        end
-        p "is_op", is_negative_sign, num_stack, output_stack, op_stack
-      elsif token == '('
-        op_stack << '('
-        is_negative_sign = true
-      elsif token == ')'
-        while op_stack.last != '('
-          output_stack << op_stack.pop.to_s
-        end
-        raise "Parentheses Error: Missing '(' to match the ')' @ column #{index + 1}!" if op_stack.empty?
-        op_stack.pop if op_stack.last == '('
-        is_negative_sign = false
-      else
-        return "Not supported yet #{token}"
-      end
-      p output_stack
-    end
-    output_stack << num_stack.join unless num_stack.empty?
-
-    until op_stack.empty?
-      raise "Parentheses Error: Missing ')' at the end!" if op_stack.last == '('
-      output_stack << op_stack.pop.to_s
-    end
-
-    output_stack.join(' ')
-  end
-
   # Does the same thing as `RPNCalculator#do_shunting_yard`, but its input is a scanned symbol stack
   # ```
   # do_shunting_yard_after_scanning(scan("1+2")) # => "1 2 +"
