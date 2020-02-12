@@ -32,9 +32,29 @@ module RPNCalculator
       else
         raise "This shouldn't happen!" \
               "The expression does not match any of the three notations!"
-        Notation::Error
+        #        Notation::Error
       end
     end
+
+    # Calculates the result based on the *input* expression given
+    # ```
+    # calculate("1 2 +") # => 3
+    # ```
+    def calculate(input : String) : Float64
+      stack = [] of Float64
+
+      input.split.each do |token|
+        op = token.char_at(-1)
+        raise DivisionByZeroError.new("Error: Attempted dividing by zero") if op == '/' && stack.last == 0
+        raise ArgumentError.new("Error: Not enough arguments!") if (is_op = OPS_HASH.fetch(op, false)) && stack.size < 2
+        stack << (is_op ? OPS_HASH[op][:proc].as(Proc(Float64, Float64, Float64)).call(stack.pop.to_f, stack.pop.to_f) : token.to_f)
+      end
+      raise ArgumentError.new("Error: Missing operator!") if stack.size > 1
+      stack.pop # or stack[0]
+    end
+
+    #  def compare_precedence?(token, top)
+    #  end
 
     # Is an interactive prompt that allows users to get the results of any legal expresssion
     # ```
@@ -44,7 +64,7 @@ module RPNCalculator
       until ["abort", "exit", "quit", "q"].includes?(input = (Readline.readline(prompt: "> ", add_history: true) || "").to_s)
         begin
           next if input.strip.empty?
-          p calculate_rpn case check_notation input
+          p calculate case check_notation input
           when Notation::Postfix
             input
           when Notation::Infix

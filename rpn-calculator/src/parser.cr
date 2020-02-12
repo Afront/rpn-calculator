@@ -7,26 +7,6 @@ module Parser
     '%' => {:precedence => 2, :associativity => :left, :proc => ->(b : Float64, a : Float64) { a % b }},
   }
 
-  # Calculates the result based on the *input* expression given
-  # ```
-  # calculate_rpn("1 2 +") # => 3
-  # ```
-  def calculate_rpn(input : String) : Float64
-    stack = [] of Float64
-
-    input.split.each do |token|
-      op = token.char_at(-1)
-      raise DivisionByZeroError.new("Error: Attempted dividing by zero") if op == '/' && stack.last == 0
-      raise ArgumentError.new("Error: Not enough arguments!") if (is_op = OPS_HASH.fetch(op, false)) && stack.size < 2
-      stack << (is_op ? OPS_HASH[op][:proc].as(Proc(Float64, Float64, Float64)).call(stack.pop.to_f, stack.pop.to_f) : token.to_f)
-    end
-    raise ArgumentError.new("Error: Missing operator!") if stack.size > 1
-    stack.pop # or stack[0]
-  end
-
-  #  def compare_precedence?(token, top)
-  #  end
-
   class Number
     property numbers, is_negative
 
