@@ -16,12 +16,16 @@ module RPNCalculator
       Error
     end
 
+    def is_alphanumeric(string : String) : Bool
+      string.chars.each { |c| return false unless c.alphanumeric? } || true
+    end
+
     def check_notation(expression : String) : Notation
       exp_array = expression.split.map { |c| c.to_i? }
       functions = ['+', '-', '*', '/', '%']
-      if expression.to_i? || functions.includes? expression[-1]
+      if expression.to_i? || is_alphanumeric(expression) || functions.includes? expression[-1]
         Notation::Postfix
-      elsif exp_array[0] && exp_array[-1].to_i?
+      elsif exp_array[0] && exp_array[-1].class == Int32
         Notation::Infix
       elsif exp_array[-2..-1].select(nil).empty?
         Notation::Prefix
