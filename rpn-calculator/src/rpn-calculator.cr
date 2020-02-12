@@ -9,20 +9,20 @@ module RPNCalculator
   class Calculator
     include Parser
 
-  # Calculates the result based on the *input* expression given
-  # ```
-  # calculate_rpn("1 2 +") # => 3
-  # ```
+    enum Notation
+      Infix
+      Prefix
+      Postfix
     end
 
-  #  def compare_precedence?(token, top)
-  #  end
-
-  class Number
-    property numbers, is_negative
-
+    def check_notation(expression : String) : Notation
+      length_not_one = input.strip.size != 1
+      if (functions.includes? input[-1]) && length_not_one
+        Postfix
+      elsif (functions.includes? input[-1]) && length_not_one
+        Prefix
       else
-        return "Not supported yet #{token}"
+        Infix
       end
     end
 
