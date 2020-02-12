@@ -25,7 +25,7 @@ module RPNCalculator
       functions = ['+', '-', '*', '/', '%']
       if expression.to_i? || is_alphanumeric(expression) || functions.includes? expression[-1]
         Notation::Postfix
-      elsif exp_array[0] && exp_array[-1].class == Int32
+      elsif (exp_array[0] && exp_array[-1].class == Int32) || expression.includes?(')')
         Notation::Infix
       elsif exp_array[-2..-1].select(nil).empty?
         Notation::Prefix
@@ -44,7 +44,6 @@ module RPNCalculator
       until ["abort", "exit", "quit", "q"].includes?(input = (Readline.readline(prompt: "> ", add_history: true) || "").to_s)
         begin
           next if input.strip.empty?
-          p check_notation input
           p calculate_rpn case check_notation input
           when Notation::Postfix
             input
