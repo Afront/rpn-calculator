@@ -7,6 +7,23 @@ module Parser
     '%' => {:precedence => 2, :associativity => :left, :proc => ->(b : Float64, a : Float64) { a % b }},
   }
 
+  enum DashSignState
+    Negative
+    Subtract
+  end
+
+  class ShuntingYardHandler
+    property output_s, operator_s, number_s, prev_token, dash_sign_state
+
+    def initialize
+      @output_s = [] of String
+      @operator_s = [] of Char
+      @number_s = Number.new
+      @prev_token = ' '
+      @dash_sign_state = DashSignState::Negative
+    end
+  end
+
   class Number
     property numbers, is_negative
 
@@ -39,60 +56,57 @@ module Parser
   # do_shunting_yard("1+2") # => "1 2 +"
   # ```
   def do_shunting_yard(input : String)
-    output_stack = [] of String
-    op_stack = [] of Char
-    number = Number.new
-    dash_is_negative_sign = true
-    prev_token = '\n'
+    handler = ShuntingYardHandler.new
+
     input.chars.each_with_index do |token, index|
       next if token.whitespace?
 
       if token.to_i? || token == '.'
-        op_stack << '*' if prev_token == ')'
-        prev_token = token
-        next number.numbers << token
+        handler.operator_s << '*' if handler.prev_token == ')'
+        handler.prev_token = token
+        next handler.number_s.numbers << token
       end
 
-      unless number.numbers.empty?
-        output_stack << number.to_s
-        dash_is_negative_sign = false
-        number = Number.new
+      unless handler.number_s.numbers.empty?
+        handler.output_s << handler.number_s.to_s
+        handler.dash_sign_state = DashSignState::Subtract
+        handler.number_s = Number.new
       end
 
       if OPS_HASH.fetch(token, false)
-        if dash_is_negative_sign
-          number.is_negative ^= true
+        if handler.dash_sign_state == DashSignState::Negative
+          handler.number_s.is_negative ^= true
         else
-          output_stack, op_stack = check_precedence(output_stack, op_stack, token) unless op_stack.empty?
-          op_stack << token
-          dash_is_negative_sign = true
+          handler.output_s, handler.operator_s = check_precedence(handler.output_s, handler.operator_s, token) unless handler.operator_s.empty?
+          handler.operator_s << token
+          handler.dash_sign_state = DashSignState::Negative
         end
       elsif token == '('
-        if prev_token == ')' || prev_token.to_i?
-          output_stack, op_stack = check_precedence(output_stack, op_stack, '*') unless op_stack.empty?
-          op_stack << '*'
+        if handler.prev_token == ')' || handler.prev_token.to_i?
+          handler.output_s, handler.operator_s = check_precedence(handler.output_s, handler.operator_s, '*') unless handler.operator_s.empty?
+          handler.operator_s << '*'
         end
-        op_stack << '('
-        dash_is_negative_sign = true
+        handler.operator_s << '('
+        handler.dash_sign_state = DashSignState::Negative
       elsif token == ')'
-        while op_stack.last != '('
-          output_stack << op_stack.pop.to_s
+        while handler.operator_s.last != '('
+          handler.output_s << handler.operator_s.pop.to_s
         end
-        raise "Parentheses Error: Missing '(' to match the ')' @ column #{index + 1}!" if op_stack.empty?
-        op_stack.pop if op_stack.last == '('
-        dash_is_negative_sign = false
+        raise "Parentheses Error: Missing '(' to match the ')' @ column #{index + 1}!" if handler.operator_s.empty?
+        handler.operator_s.pop if handler.operator_s.last == '('
+        handler.dash_sign_state = DashSignState::Subtract
       else
         raise "Not supported yet #{token}"
       end
-      prev_token = token
+      handler.prev_token = token
     end
-    output_stack << number.to_s unless number.numbers.empty?
+    handler.output_s << handler.number_s.to_s unless handler.number_s.numbers.empty?
 
-    until op_stack.empty?
-      raise "Parentheses Error: Missing ')' at the end!" if op_stack.last == '('
-      output_stack << op_stack.pop.to_s
+    until handler.operator_s.empty?
+      raise "Parentheses Error: Missing ')' at the end!" if handler.operator_s.last == '('
+      handler.output_s << handler.operator_s.pop.to_s
     end
 
-    output_stack.join(' ')
+    handler.output_s.join(' ')
   end
 end
