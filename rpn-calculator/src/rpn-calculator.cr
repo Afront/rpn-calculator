@@ -13,17 +13,22 @@ module RPNCalculator
       Infix
       Prefix
       Postfix
+      Error
     end
 
     def check_notation(expression : String) : Notation
+      exp_array = expression.split
       functions = ['+', '-', '*', '/', '%']
-      length_not_one = expression.strip.size != 1
-      if (functions.includes? expression[-1]) && length_not_one
+      if expression.to_i? || functions.includes? expression[-1]
         Notation::Postfix
-      elsif (functions.includes? expression[0]) && length_not_one
+      elsif exp_array[0].to_i? && exp_array[-1].to_i?
+        Notation::Infix
+      elsif exp_array[-2..-1].map { |i| i.to_i? }.select(nil).empty?
         Notation::Prefix
       else
-        Notation::Infix
+        raise "This shouldn't happen!" \
+              "The expression does not match any of the three notations!"
+        Notation::Error
       end
     end
 
@@ -34,6 +39,7 @@ module RPNCalculator
     def repl
       until ["abort", "exit", "quit", "q"].includes?(input = (Readline.readline(prompt: "> ", add_history: true) || "").to_s)
         begin
+          next if input.strip.empty?
           p check_notation input
           p calculate_rpn case check_notation input
           when Notation::Postfix
