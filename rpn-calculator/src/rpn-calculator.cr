@@ -16,13 +16,14 @@ module RPNCalculator
     end
 
     def check_notation(expression : String) : Notation
-      length_not_one = input.strip.size != 1
-      if (functions.includes? input[-1]) && length_not_one
-        Postfix
-      elsif (functions.includes? input[-1]) && length_not_one
-        Prefix
+      functions = ['+', '-', '*', '/', '%']
+      length_not_one = expression.strip.size != 1
+      if (functions.includes? expression[-1]) && length_not_one
+        Notation::Postfix
+      elsif (functions.includes? expression[0]) && length_not_one
+        Notation::Prefix
       else
-        Infix
+        Notation::Infix
       end
     end
 
@@ -31,16 +32,18 @@ module RPNCalculator
     # repl # => >
     # ```
     def repl
-      functions = ['+', '-', '*', '/', '%']
-      until ["abort", "exit", "quit", "q"].includes?(input = Readline.readline(prompt: "> ", add_history: true) || "")
+      until ["abort", "exit", "quit", "q"].includes?(input = (Readline.readline(prompt: "> ", add_history: true) || "").to_s)
         begin
-          if input.strip.empty?
-            next
-          elsif (functions.includes? input[-1]) && input.strip.size != 1
-            p calculate_rpn(input || "")
+          p check_notation input
+          p calculate_rpn case check_notation input
+          when Notation::Postfix
+            input
+          when Notation::Infix
+            do_shunting_yard input
+          when Notation::Prefix
+            raise "Prefix to Postfix transpiler not implemented yet!"
           else
-            p do_shunting_yard(input || "")
-            p calculate_rpn do_shunting_yard(input || "")
+            raise "Should not occur"
           end
         rescue error_msg : Exception
           p error_msg
