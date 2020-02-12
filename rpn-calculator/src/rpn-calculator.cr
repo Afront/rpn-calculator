@@ -55,11 +55,14 @@ module RPNCalculator
     op_stack = [] of Char
     number = Number.new
     dash_is_negative_sign = true
-
+    prev_token = '\n'
     input.chars.each_with_index do |token, index|
       next if token.whitespace?
-      next number.numbers << token if token.to_i? || token == '.'
-
+      if token.to_i? || token == '.'
+        op_stack << '*' if prev_token == ')'
+        prev_token = token
+        next number.numbers << token
+      end
       unless number.numbers.empty?
         output_stack << number.to_s
         dash_is_negative_sign = false
@@ -86,6 +89,21 @@ module RPNCalculator
           dash_is_negative_sign = true
         end
       elsif token == '('
+        if prev_token == ')' || prev_token.to_i?
+          unless op_stack.empty?
+            unless op_stack.last == '('
+              top_precedence = OPS_HASH[op_stack.last][:precedence].as(Int32)
+              tkn_precedence = OPS_HASH['*'][:precedence].as(Int32)
+              tkn_associativity = OPS_HASH['*'][:associativity].as(Symbol)
+              while !(op_stack.empty?) && (op_stack.last != '(') &&
+                    ((top_precedence > tkn_precedence) ||
+                    (top_precedence == tkn_precedence && tkn_associativity == :left))
+                output_stack << op_stack.pop.to_s
+              end
+            end
+          end
+          op_stack << '*'
+        end
         op_stack << '('
         dash_is_negative_sign = true
       elsif token == ')'
@@ -98,7 +116,7 @@ module RPNCalculator
       else
         return "Not supported yet #{token}"
       end
-      p output_stack
+      prev_token = token
     end
     output_stack << number.to_s unless number.numbers.empty?
 
@@ -122,17 +140,15 @@ module RPNCalculator
         elsif (['+', '-', '*', '/', '%'].includes? input[-1]) && input.strip.size != 1
           p calculate_rpn(input || "")
         else
-          # p scan input
           # p do_shunting_yard(input || "")
           p calculate_rpn do_shunting_yard(input || "")
         end
-      rescue e : Exception
-        p e
+      rescue error_msg : Exception
+        p error_msg
       end
     end
   end
 end
 
-# TODO: Try to find a way to allow specs/tests without calling repl
 include RPNCalculator
 repl
