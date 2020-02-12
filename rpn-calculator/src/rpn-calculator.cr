@@ -17,13 +17,13 @@ module RPNCalculator
     end
 
     def check_notation(expression : String) : Notation
-      exp_array = expression.split
+      exp_array = expression.split.map { |c| c.to_i? }
       functions = ['+', '-', '*', '/', '%']
       if expression.to_i? || functions.includes? expression[-1]
         Notation::Postfix
-      elsif exp_array[0].to_i? && exp_array[-1].to_i?
+      elsif exp_array[0] && exp_array[-1].to_i?
         Notation::Infix
-      elsif exp_array[-2..-1].map { |i| i.to_i? }.select(nil).empty?
+      elsif exp_array[-2..-1].select(nil).empty?
         Notation::Prefix
       else
         raise "This shouldn't happen!" \
