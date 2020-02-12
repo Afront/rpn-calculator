@@ -1,5 +1,9 @@
 version: 1.0
 shards:
+  ameba:
+    github: crystal-ameba/ameba
+    version: 0.11.0
+
   readline:
     github: crystal-lang/crystal-readline
     version: 0.1.0

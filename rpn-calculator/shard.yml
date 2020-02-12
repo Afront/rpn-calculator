@@ -12,6 +12,11 @@ dependencies:
   readline:
     github: crystal-lang/crystal-readline
 
+development_dependencies:
+  ameba:
+    github: crystal-ameba/ameba
+    version: ~> 0.11.0
+
 crystal: 0.32.1
 
 license: MIT | APACHE2
