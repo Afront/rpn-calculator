@@ -426,11 +426,11 @@ module RPNCalculator
         if input.strip.empty?
           next
         elsif (['+', '-', '*', '/', '%'].includes? input[-1]) && input.strip.size != 1
-          p calculate_rpn_automata(input || "")
+          p calculate_rpn(input || "")
         else
           # p scan input
           # p do_shunting_yard(input || "")
-          p calculate_rpn_automata do_shunting_yard(input || "")
+          p calculate_rpn do_shunting_yard(input || "")
         end
       rescue e : Exception
         p e
