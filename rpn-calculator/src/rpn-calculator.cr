@@ -63,21 +63,30 @@ module RPNCalculator
       popped_tokens = [] of Float64
       arity.times { |i| popped_tokens << stack.pop }
 
-      arg_array = [Tuple(Float64).from(popped_tokens),
-                   Tuple(Float64).from(popped_tokens),
-                   Tuple(Float64, Float64).from(popped_tokens),
-                   Tuple(Float64, Float64, Float64).from(popped_tokens)]
-      {stack, arg_array[arity]}
+      arg_tuple = case arity
+                  when 1
+                    Tuple(Float64).from(popped_tokens)
+                  when 2
+                    Tuple(Float64, Float64).from(popped_tokens)
+                  when 3
+                    Tuple(Float64, Float64, Float64).from(popped_tokens)
+                  else
+                    raise "Something is wrong with the argument tuple for popping the tokens"
+                  end
+
+      {stack, arg_tuple}
     end
 
     def evaluate_expression(op, popped_tokens) : Float64
-      case popped_tokens
-      #      when 1
-      #        OPS_HASH[op][:proc].as(Proc(Float64, Float64, Float64)).call(*popped_tokens.as(Tuple(Float64)))
+      case popped_tokens.size
+      when 1
+        -3.14
+        # OPS_HASH[op][:proc].as(Proc(Float64, Float64, Float64)).call(*popped_tokens.as(Tuple(Float64)))
       when 2
         OPS_HASH[op][:proc].as(Proc(Float64, Float64, Float64)).call(*popped_tokens.as(Tuple(Float64, Float64)))
-        #     when 3
-        #      OPS_HASH[op][:proc].as(Proc(Float64, Float64, Float64)).call(*popped_tokens.as(Tuple(Float64, Float64, Float64)))
+      when 3
+        -3.14
+        # OPS_HASH[op][:proc].as(Proc(Float64, Float64, Float64)).call(*popped_tokens.as(Tuple(Float64, Float64, Float64)))
       else
         -3.14
       end
