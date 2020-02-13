@@ -61,7 +61,7 @@ module RPNCalculator
 
     def token_pop(stack : Array(Float64), arity : Int32) : Tuple(Array(Float64), Tuple(Float64) | Tuple(Float64, Float64) | Tuple(Float64, Float64, Float64))
       popped_tokens = [] of Float64
-      arity.times { |i| popped_tokens << stack.pop }
+      arity.times { popped_tokens << stack.pop }
 
       arg_tuple = case arity
                   when 1
