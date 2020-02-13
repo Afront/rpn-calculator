@@ -48,14 +48,40 @@ module RPNCalculator
         op = token.char_at(-1)
         raise DivisionByZeroError.new("Error: Attempted dividing by zero") if op == '/' && stack.last == 0
         raise ArgumentError.new("Error: Not enough arguments!") if (is_op = OPS_HASH.fetch(op, false)) && stack.size < 2
-        stack << (is_op ? OPS_HASH[op][:proc].as(Proc(Float64, Float64, Float64)).call(stack.pop.to_f, stack.pop.to_f) : token.to_f)
+        stack << if is_op
+          stack, popped_tokens = token_pop(stack, OPS_HASH[op][:proc].as(Proc).arity.to_i)
+          evaluate_expression(op, popped_tokens)
+        else
+          token.to_f
+        end
       end
       raise ArgumentError.new("Error: Missing operator!") if stack.size > 1
       stack.pop # or stack[0]
     end
 
-    #  def compare_precedence?(token, top)
-    #  end
+    def token_pop(stack : Array(Float64), arity : Int32) : Tuple(Array(Float64), Tuple(Float64) | Tuple(Float64, Float64) | Tuple(Float64, Float64, Float64))
+      popped_tokens = [] of Float64
+      arity.times { |i| popped_tokens << stack.pop }
+
+      arg_array = [Tuple(Float64).from(popped_tokens),
+                   Tuple(Float64).from(popped_tokens),
+                   Tuple(Float64, Float64).from(popped_tokens),
+                   Tuple(Float64, Float64, Float64).from(popped_tokens)]
+      {stack, arg_array[arity]}
+    end
+
+    def evaluate_expression(op, popped_tokens) : Float64
+      case popped_tokens
+      #      when 1
+      #        OPS_HASH[op][:proc].as(Proc(Float64, Float64, Float64)).call(*popped_tokens.as(Tuple(Float64)))
+      when 2
+        OPS_HASH[op][:proc].as(Proc(Float64, Float64, Float64)).call(*popped_tokens.as(Tuple(Float64, Float64)))
+        #     when 3
+        #      OPS_HASH[op][:proc].as(Proc(Float64, Float64, Float64)).call(*popped_tokens.as(Tuple(Float64, Float64, Float64)))
+      else
+        -3.14
+      end
+    end
 
     # Is an interactive prompt that allows users to get the results of any legal expresssion
     # ```
@@ -79,6 +105,7 @@ module RPNCalculator
           end
         rescue error_msg : Exception
           p error_msg
+          p error_msg.backtrace
         end
       end
     end
