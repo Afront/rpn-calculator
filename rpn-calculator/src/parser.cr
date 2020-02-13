@@ -27,7 +27,6 @@ module Parser
 
     # or handle_number
     def goto_number
-      return if @curr_token.whitespace?
       @operator_s << '*' if @prev_token == ')'
       @prev_token = @curr_token
       @number_s.numbers << @curr_token
@@ -85,9 +84,9 @@ module Parser
     # ```
     def do_shunting_yard(input : String)
       input.chars.each do |token|
+        next if token.whitespace?
         @curr_token = token
-
-        next goto_number if token.to_i? || token == '.' || token.whitespace?
+        next goto_number if token.to_i? || token == '.'
 
         unless @number_s.numbers.empty?
           @output_s << @number_s.to_s
@@ -114,6 +113,7 @@ module Parser
         @output_s << @operator_s.pop.to_s
       end
 
+      p @output_s
       @output_s.join(' ')
     end
   end

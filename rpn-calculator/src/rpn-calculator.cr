@@ -25,7 +25,7 @@ module RPNCalculator
       functions = ['+', '-', '*', '/', '%']
       if expression.to_i? || is_alphanumeric(expression) || functions.includes? expression[-1]
         Notation::Postfix
-      elsif (exp_array[0] && exp_array[-1].class == Int32) || expression.includes?(')')
+      elsif (exp_array[0] && exp_array[-1].class == Int32) || expression.includes?(')') || exp_array.size == 1
         Notation::Infix
       elsif exp_array[-2..-1].select(nil).empty?
         Notation::Prefix
@@ -61,8 +61,9 @@ module RPNCalculator
     # repl # => >
     # ```
     def repl
-      handler = ShuntingYardHandler.new
       until ["abort", "exit", "quit", "q"].includes?(input = (Readline.readline(prompt: "> ", add_history: true) || "").to_s)
+        handler = ShuntingYardHandler.new
+
         begin
           next if input.strip.empty?
           p calculate case check_notation input
