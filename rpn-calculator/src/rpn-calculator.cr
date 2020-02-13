@@ -30,8 +30,9 @@ module RPNCalculator
       elsif exp_array[-2..-1].select(nil).empty?
         Notation::Prefix
       else
-        raise "This shouldn't happen!" \
-              "The expression does not match any of the three notations!"
+        Notation::Infix
+        #        raise "This shouldn't happen!" \
+        #             "The expression does not match any of the three notations!"
         #        Notation::Error
       end
     end
