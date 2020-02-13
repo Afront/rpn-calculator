@@ -13,7 +13,7 @@ module Parser
   end
 
   class ShuntingYardHandler
-    property output_s, operator_s, number_s, prev_token, dash_sign_state, curr_token, index
+    property output_s, operator_s, number_s, prev_token, dash_sign_state, curr_token, index, goto_hash
 
     def initialize
       @output_s = [] of String
@@ -23,17 +23,30 @@ module Parser
       @curr_token = ' '
       @dash_sign_state = DashSignState::Negative
       @index = 0
+      @goto_hash = {} of Char => Proc(Bool)
+      load_goto_hash
+    end
+
+    def load_goto_hash : Hash
+      @goto_hash = {'(' => ->{ goto_open }, ')' => ->{ goto_closed }}
+      OPS_HASH.each_key do |op|
+        @goto_hash.merge!({op.as(Char) => ->{ goto_operator }})
+      end
+      goto_hash
     end
 
     # or handle_number
-    def goto_number
+    def goto_number : Bool
+      it_worked = false
       @operator_s << '*' if @prev_token == ')'
       @prev_token = @curr_token
       @number_s.numbers << @curr_token
+      it_worked = true
     end
 
     # or handle_operator
-    def goto_operator
+    def goto_operator : Bool
+      it_worked = false
       if dash_sign_state == DashSignState::Negative
         @number_s.is_negative ^= true
       else
@@ -41,27 +54,33 @@ module Parser
         @operator_s << @curr_token
         @dash_sign_state = DashSignState::Negative
       end
+      it_worked = true
     end
 
-    def goto_open
+    def goto_open : Bool
+      it_worked = false
       if @prev_token == ')' || @prev_token.to_i?
         check_precedence unless @operator_s.empty?
         @operator_s << '*'
       end
       @operator_s << '('
       @dash_sign_state = DashSignState::Negative
+      it_worked = true
     end
 
-    def goto_closed
+    def goto_closed : Bool
+      it_worked = false
       while @operator_s.last != '('
         @output_s << @operator_s.pop.to_s
       end
       raise "Parentheses Error: Missing '(' to match the ')' @ column #{@index + 1}!" if @operator_s.empty?
       @operator_s.pop if @operator_s.last == '('
       @dash_sign_state = DashSignState::Subtract
+      it_worked = true
     end
 
-    def check_precedence
+    def check_precedence : Bool
+      it_worked = false
       unless @operator_s.last == '('
         top_precedence = OPS_HASH[@operator_s.last][:precedence].as(Int32)
         tkn_precedence = OPS_HASH[@curr_token][:precedence].as(Int32)
@@ -72,6 +91,7 @@ module Parser
           @output_s << @operator_s.pop.to_s
         end
       end
+      it_worked = true
     end
 
     def is_operator : Bool
@@ -82,7 +102,7 @@ module Parser
     # ```
     # do_shunting_yard("1+2") # => "1 2 +"
     # ```
-    def do_shunting_yard(input : String)
+    def do_shunting_yard(input : String) : String
       input.chars.each do |token|
         next if token.whitespace?
         @curr_token = token
@@ -94,15 +114,7 @@ module Parser
           @number_s.clear
         end
 
-        if is_operator
-          goto_operator
-        elsif @curr_token == '('
-          goto_open
-        elsif @curr_token == ')'
-          goto_closed
-        else
-          raise "Not supported yet #{token}"
-        end
+        @goto_hash.fetch(token) { |token| raise "Not supported yet #{token}" }.call
         @prev_token = token
         @index += 1
       end
@@ -113,7 +125,6 @@ module Parser
         @output_s << @operator_s.pop.to_s
       end
 
-      p @output_s
       @output_s.join(' ')
     end
   end
@@ -133,7 +144,7 @@ module Parser
     end
 
     def to_s : String
-      p (is_negative ? "-" : "") + numbers.join.to_s
+      (is_negative ? "-" : "") + numbers.join.to_s
     end
   end
 end
