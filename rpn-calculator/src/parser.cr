@@ -78,6 +78,44 @@ module Parser
     def is_operator : Bool
       OPS_HASH.fetch(@curr_token, false) != false
     end
+
+    # Converts the given *input* expression into a postfix notation expression
+    # ```
+    # do_shunting_yard("1+2") # => "1 2 +"
+    # ```
+    def do_shunting_yard(input : String)
+      input.chars.each do |token|
+        @curr_token = token
+
+        next goto_number if token.to_i? || token == '.' || token.whitespace?
+
+        unless @number_s.numbers.empty?
+          @output_s << @number_s.to_s
+          @dash_sign_state = DashSignState::Subtract
+          @number_s.clear
+        end
+
+        if is_operator
+          goto_operator
+        elsif @curr_token == '('
+          goto_open
+        elsif @curr_token == ')'
+          goto_closed
+        else
+          raise "Not supported yet #{token}"
+        end
+        @prev_token = token
+        @index += 1
+      end
+      @output_s << @number_s.to_s unless @number_s.numbers.empty?
+
+      until @operator_s.empty?
+        raise "Parentheses Error: Missing ')' at the end!" if @operator_s.last == '('
+        @output_s << @operator_s.pop.to_s
+      end
+
+      @output_s.join(' ')
+    end
   end
 
   class Number
@@ -97,45 +135,5 @@ module Parser
     def to_s : String
       p (is_negative ? "-" : "") + numbers.join.to_s
     end
-  end
-
-  # Converts the given *input* expression into a postfix notation expression
-  # ```
-  # do_shunting_yard("1+2") # => "1 2 +"
-  # ```
-  def do_shunting_yard(input : String)
-    handler = ShuntingYardHandler.new
-
-    input.chars.each do |token|
-      handler.curr_token = token
-
-      next handler.goto_number if token.to_i? || token == '.' || token.whitespace?
-
-      unless handler.number_s.numbers.empty?
-        handler.output_s << handler.number_s.to_s
-        handler.dash_sign_state = DashSignState::Subtract
-        handler.number_s.clear
-      end
-
-      if handler.is_operator
-        handler.goto_operator
-      elsif handler.curr_token == '('
-        handler.goto_open
-      elsif handler.curr_token == ')'
-        handler.goto_closed
-      else
-        raise "Not supported yet #{token}"
-      end
-      handler.prev_token = token
-      handler.index += 1
-    end
-    handler.output_s << handler.number_s.to_s unless handler.number_s.numbers.empty?
-
-    until handler.operator_s.empty?
-      raise "Parentheses Error: Missing ')' at the end!" if handler.operator_s.last == '('
-      handler.output_s << handler.operator_s.pop.to_s
-    end
-
-    handler.output_s.join(' ')
   end
 end

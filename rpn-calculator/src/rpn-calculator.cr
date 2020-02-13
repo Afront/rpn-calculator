@@ -61,6 +61,7 @@ module RPNCalculator
     # repl # => >
     # ```
     def repl
+      handler = ShuntingYardHandler.new
       until ["abort", "exit", "quit", "q"].includes?(input = (Readline.readline(prompt: "> ", add_history: true) || "").to_s)
         begin
           next if input.strip.empty?
@@ -68,7 +69,7 @@ module RPNCalculator
           when Notation::Postfix
             input
           when Notation::Infix
-            do_shunting_yard input
+            handler.do_shunting_yard input
           when Notation::Prefix
             raise "Prefix to Postfix transpiler not implemented yet!"
           else
