@@ -7,7 +7,13 @@ module RPNCalculator
   VERSION = "0.2.0"
 
   class Calculator
+    getter var_hash
+
     include Parser
+
+    def initialize
+      @var_hash = {} of String => Float64
+    end
 
     enum Notation
       Infix
@@ -37,6 +43,9 @@ module RPNCalculator
       end
     end
 
+    def assign
+    end
+
     # Calculates the result based on the *input* expression given
     # ```
     # calculate("1 2 +") # => 3
@@ -49,6 +58,7 @@ module RPNCalculator
         raise DivisionByZeroError.new("Error: Attempted dividing by zero") if op == '/' && stack.last == 0
         raise ArgumentError.new("Error: Not enough arguments!") if (is_op = OPS_HASH.fetch(op, false)) && stack.size < 2
         stack << if is_op
+          next assign if token == '='
           stack, popped_tokens = token_pop(stack, OPS_HASH[op][:proc].as(Proc).arity.to_i)
           evaluate_expression(op, popped_tokens)
         else

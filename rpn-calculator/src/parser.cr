@@ -1,13 +1,14 @@
 module Parser
   OPS_HASH = {
-    '+' => {:precedence => 1, :associativity => :left, :proc => ->(b : Float64, a : Float64) { a + b }},
-    '-' => {:precedence => 1, :associativity => :left, :proc => ->(b : Float64, a : Float64) { a - b }},
-    '*' => {:precedence => 2, :associativity => :left, :proc => ->(b : Float64, a : Float64) { a * b }},
-    '×' => {:precedence => 2, :associativity => :left, :proc => ->(b : Float64, a : Float64) { a * b }},
-    '/' => {:precedence => 2, :associativity => :left, :proc => ->(b : Float64, a : Float64) { a / b }},
-    '÷' => {:precedence => 2, :associativity => :left, :proc => ->(b : Float64, a : Float64) { a / b }},
-    '%' => {:precedence => 2, :associativity => :left, :proc => ->(b : Float64, a : Float64) { a % b }},
-    '^' => {:precedence => 3, :associativity => :right, :proc => ->(b : Float64, a : Float64) { a ** b }},
+    '+' => {:precedence => 2, :associativity => :left, :proc => ->(b : Float64, a : Float64) { a + b }},
+    '-' => {:precedence => 2, :associativity => :left, :proc => ->(b : Float64, a : Float64) { a - b }},
+    '*' => {:precedence => 3, :associativity => :left, :proc => ->(b : Float64, a : Float64) { a * b }},
+    '×' => {:precedence => 3, :associativity => :left, :proc => ->(b : Float64, a : Float64) { a * b }},
+    '/' => {:precedence => 3, :associativity => :left, :proc => ->(b : Float64, a : Float64) { a / b }},
+    '÷' => {:precedence => 3, :associativity => :left, :proc => ->(b : Float64, a : Float64) { a / b }},
+    '%' => {:precedence => 3, :associativity => :left, :proc => ->(b : Float64, a : Float64) { a % b }},
+    '^' => {:precedence => 4, :associativity => :right, :proc => ->(b : Float64, a : Float64) { a ** b }},
+    '=' => {:precedence => 1, :associativity => :left, :proc => ->(b : Float64, a : String, hash : Hash(Char, Proc(Bool))) { hash[a] = b }},
   }
 
   enum DashSignState
@@ -19,6 +20,7 @@ module Parser
     property output_s, operator_s, number_s, prev_token, dash_sign_state, curr_token, index, goto_hash
 
     def initialize
+      @hash = {} of String => Float64
       @output_s = [] of String
       @operator_s = [] of Char
       @number_s = Number.new
@@ -104,7 +106,8 @@ module Parser
       input.chars.each do |token|
         next if token.whitespace?
         @curr_token = token
-        next goto_number if token.to_i? || token == '.'
+        next goto_number if (token.to_i? || token == '.') && @id_s.empty?
+        next @id_s << token if token.alphanumeric?
 
         unless @number_s.numbers.empty?
           @output_s << @number_s.to_s
