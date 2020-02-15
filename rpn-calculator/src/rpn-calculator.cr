@@ -99,7 +99,6 @@ module RPNCalculator
     def check_notation(expression : String) : Notation
       exp_token = Token.new(expression)
       exp_array = expression.split.map { |c| c.to_i? }
-      functions = ['+', '-', '*', '/', '%', '^', '=']
       if exp_token.is_valid?
         Notation::Postfix
       elsif (exp_array[0] && exp_array[-1].is_a? Int32) || expression.includes?(')') || exp_array.size == 1
