@@ -9,6 +9,7 @@ module Parser
     '%' => {:precedence => 3, :associativity => :left, :proc => ->(b : Float64, a : Float64) { a % b }},
     '^' => {:precedence => 4, :associativity => :right, :proc => ->(b : Float64, a : Float64) { a ** b }},
     '=' => {:precedence => 1, :associativity => :left, :proc => ->(b : Float64, a : String) { b }},
+    '!' => {:precedence => 5, :associativity => :right, :proc => ->(n : Float64) { (1..n.to_i).reduce(1.0) { |a, b| a*b*1.0 } }},
   }
 
   enum DashSignState

@@ -9,7 +9,9 @@ module RPNCalculator
   class Token
     include Parser
     getter token : String | Float64
+
     @@var_hash = {} of String => Float64
+    @@factorial_memo = {} of Float64 => Float64
 
     def initialize(@token)
       raise "Token is invalid!" if !is_valid?
@@ -70,13 +72,17 @@ module RPNCalculator
     def operate(popped_tokens)
       Token.new(case popped_tokens.size
       when 1
-        -3.14
-        # OPS_HASH[token.to_s[0]][:proc].as(Proc(Float64, Float64, Float64)).call(*popped_tokens.as(Tuple(Float64)))
+        if token == "!"
+          n = popped_tokens[0]
+          @@factorial_memo[n.to_f] ||= OPS_HASH[token.to_s[0]][:proc].as(Proc(Float64, Float64)).call(n).to_f
+        else
+          result = OPS_HASH[token.to_s[0]][:proc].as(Proc(Float64, Float64)).call(*popped_tokens.as(Tuple(Float64)))
+        end
       when 2
         OPS_HASH[token.to_s[0]][:proc].as(Proc(Float64, Float64, Float64)).call(*popped_tokens.as(Tuple(Float64, Float64)))
       when 3
         -3.14
-        # OPS_HASH[token[0].to_s][:proc].as(Proc(Float64, Float64, Float64)).call(*popped_tokens.as(Tuple(Float64, Float64, Float64)))
+        #        OPS_HASH[token[0].to_s][:proc].as(Proc(Float64, Float64, Float64, Float64)).call(*popped_tokens.as(Tuple(Float64, Float64, Float64)))
       else
         -3.14
       end)
@@ -85,9 +91,6 @@ module RPNCalculator
 
   class Calculator
     include Parser
-
-    def initialize
-    end
 
     enum Notation
       Infix
@@ -125,23 +128,24 @@ module RPNCalculator
     # ```
     # calculate("1 2 +") # => 3
     # ```
-    def calculate(input : String) : Float64
+    def calculate(input : String) : String
       stack = [] of Token
 
       input.split.each do |string|
         token = Token.new(string)
         raise DivisionByZeroError.new("Error: Attempted dividing by zero") if token == '/' && stack.last == 0
-        raise ArgumentError.new("Error: Not enough arguments!") if token.is_op? && stack.size < 2
         stack << if token.is_op?
+          arity = OPS_HASH[string[-1]][:proc].as(Proc).arity.to_i
+          raise ArgumentError.new("Error: Not enough arguments!") if token.is_op? && stack.size < arity
           next assign(stack) if token == "="
-          stack, popped_tokens = token_pop(stack, OPS_HASH[string[-1]][:proc].as(Proc).arity.to_i)
+          stack, popped_tokens = token_pop(stack, arity)
           token.operate(popped_tokens)
         else
           token
         end
       end
       raise ArgumentError.new("Error: Missing operator!") if stack.size > 1
-      stack.pop.to_f # or stack[0].to_f
+      sprintf("%g", stack.pop.to_f) # or stack[0].to_f
     end
 
     def token_pop(stack : Array(Token), arity : Int32) : Tuple(Array(Token), Tuple(Float64) | Tuple(Float64, Float64) | Tuple(Float64, Float64, Float64))
@@ -172,7 +176,7 @@ module RPNCalculator
 
         begin
           next if input.strip.empty?
-          p calculate case check_notation input
+          puts calculate case check_notation input
           when Notation::Postfix
             input
           when Notation::Infix
@@ -183,8 +187,7 @@ module RPNCalculator
             raise "Should not occur"
           end
         rescue error_msg : Exception
-          p error_msg
-          p error_msg.backtrace
+          puts error_msg, error_msg.backtrace
         end
       end
     end
