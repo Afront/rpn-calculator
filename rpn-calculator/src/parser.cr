@@ -8,7 +8,7 @@ module Parser
     '÷' => {:precedence => 3, :associativity => :left, :proc => ->(b : Float64, a : Float64) { a / b }},
     '%' => {:precedence => 3, :associativity => :left, :proc => ->(b : Float64, a : Float64) { a % b }},
     '^' => {:precedence => 4, :associativity => :right, :proc => ->(b : Float64, a : Float64) { a ** b }},
-    '=' => {:precedence => 1, :associativity => :left, :proc => ->(b : Float64, a : String, hash : Hash(Char, Proc(Bool))) { hash[a] = b }},
+    '=' => {:precedence => 1, :associativity => :left, :proc => ->(b : Float64, a : String) { b }},
   }
 
   enum DashSignState
