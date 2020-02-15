@@ -23,8 +23,7 @@ module RPNCalculator
     end
 
     def convert_to_f(token : String | Float64) : Float64
-      p token
-      p (token.class.is_a? String) ? @var_hash[token] : token.to_f
+      (token.is_a? String) ? @var_hash[token] : token.to_f
     end
 
     def is_alphanumeric(string : String) : Bool
@@ -71,21 +70,19 @@ module RPNCalculator
           next assign(stack) if token == "="
           stack, popped_tokens = token_pop(stack, OPS_HASH[op][:proc].as(Proc).arity.to_i)
           evaluate_expression(op, popped_tokens)
-        elsif token.class == String
-          token
-        else
+        elsif token.to_f?
           token.to_f
+        else
+          token
         end
       end
       raise ArgumentError.new("Error: Missing operator!") if stack.size > 1
-      p stack
       convert_to_f(stack.pop) # or convert_to_f(stack[0])
     end
 
     def token_pop(stack : Array(Float64 | String), arity : Int32) : Tuple(Array(Float64 | String), Tuple(Float64) | Tuple(Float64, Float64) | Tuple(Float64, Float64, Float64))
       popped_tokens = [] of Float64
       arity.times { popped_tokens << convert_to_f(stack.pop) }
-      p popped_tokens
       # Convert popped_tokens to numbers only -> var to numbers method
       arg_tuple = case arity
                   when 1
