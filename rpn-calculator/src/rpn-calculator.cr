@@ -40,14 +40,15 @@ module RPNCalculator
     end
 
     def to_f : Float64
-      token_str = token.to_s
-      if is_f?
-        token.to_f
-      elsif token_str[0] == '-'
-        -@@var_hash[token_str[1..-1]]
-      else
-        @@var_hash[token]
+      token_arr = token.to_s.chars
+      is_negative = 1
+
+      while token_arr[0] == '-' || token_arr[0] == '+'
+        is_negative *= -1 if token_arr[0] == '-'
+        token_arr.shift
       end
+
+      is_f? ? token.to_f : @@var_hash[token_arr.join] * is_negative
     end
 
     def to_s : String
