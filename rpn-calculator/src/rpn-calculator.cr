@@ -14,7 +14,7 @@ module RPNCalculator
     @@factorial_memo = {} of Float64 => Float64
 
     def initialize(@token)
-      raise "Token is invalid!" if !is_valid?
+      # raise "Token is invalid!" if !is_valid?
     end
 
     def type : Class
@@ -22,7 +22,7 @@ module RPNCalculator
     end
 
     def is_alphanumeric? : Bool
-      string.chars.each { |c| return false unless c.alphanumeric? } || true
+      token.to_s.chars.each { |c| return false unless c.alphanumeric? } || true
     end
 
     def is_f? : Bool
@@ -38,7 +38,7 @@ module RPNCalculator
     end
 
     def is_valid? : Bool
-      is_f? || is_s? || is_op?
+      is_alphanumeric? || is_op?
     end
 
     def to_f : Float64
@@ -50,7 +50,13 @@ module RPNCalculator
         token_arr.shift
       end
 
-      is_f? ? token.to_f : @@var_hash[token_arr.join] * is_negative
+      trimmed_token = token_arr.join
+
+      if is_f?
+        token.to_f
+      else
+        @@var_hash.fetch(trimmed_token, trimmed_token).to_f * is_negative
+      end
     end
 
     def to_s : String
@@ -74,7 +80,7 @@ module RPNCalculator
       when 1
         if token == "!"
           n = popped_tokens[0]
-          @@factorial_memo[n.to_f] ||= OPS_HASH[token.to_s[0]][:proc].as(Proc(Float64, Float64)).call(n).to_f
+          @@factorial_memo[n.to_f] ||= OPS_HASH[token.to_s[0]][:proc].as(Proc(Float64, Float64)).call(n.to_f).to_f
         else
           result = OPS_HASH[token.to_s[0]][:proc].as(Proc(Float64, Float64)).call(*popped_tokens.as(Tuple(Float64)))
         end
@@ -148,6 +154,10 @@ module RPNCalculator
       sprintf("%g", stack.pop.to_f) # or stack[0].to_f
     end
 
+    # Calculates the result based on the *input* expression given
+    # ```
+    # calculate("1 2 +") # => 3
+    # ```
     def token_pop(stack : Array(Token), arity : Int32) : Tuple(Array(Token), Tuple(Float64) | Tuple(Float64, Float64) | Tuple(Float64, Float64, Float64))
       popped_tokens = [] of Float64
       arity.times { popped_tokens << stack.pop.to_f }
@@ -180,7 +190,7 @@ module RPNCalculator
           when Notation::Postfix
             input
           when Notation::Infix
-            handler.do_shunting_yard input
+            p handler.do_shunting_yard input
           when Notation::Prefix
             raise "Prefix to Postfix transpiler not implemented yet!"
           else
