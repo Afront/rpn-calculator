@@ -190,7 +190,7 @@ module RPNCalculator
           when Notation::Postfix
             input
           when Notation::Infix
-            p handler.do_shunting_yard input
+            handler.do_shunting_yard input
           when Notation::Prefix
             raise "Prefix to Postfix transpiler not implemented yet!"
           else

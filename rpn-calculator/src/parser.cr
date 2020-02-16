@@ -53,7 +53,7 @@ module Parser
 
     # or handle_operator
     def goto_operator : Bool
-      if dash_sign_state == DashSignState::Negative
+      if dash_sign_state == DashSignState::Negative && @curr_token == '-'
         @number_s.is_negative ^= true
       else
         handle_precedence unless @operator_s.empty?
@@ -64,9 +64,8 @@ module Parser
     end
 
     def goto_open : Bool
-      p prev_token, curr_token
       if @prev_token == ')' || @prev_token.to_i?
-        p handle_precedence unless @operator_s.empty?
+        handle_precedence unless @operator_s.empty?
         @operator_s << '*'
       end
       @operator_s << '('
@@ -108,7 +107,7 @@ module Parser
     # ```
     def do_shunting_yard(input : String) : String
       input.chars.each do |token|
-        p token, @output_s, @operator_s, @number_s
+        @index += 1
         next if token.whitespace?
         @curr_token = token
         next goto_number if (token.to_i? || token == '.') && @id_s.empty?
@@ -120,11 +119,18 @@ module Parser
           @number_s.clear
         end
 
+        unless @id_s.empty?
+          @output_s << @id_s.to_s
+          @dash_sign_state = DashSignState::Subtract
+          @id_s.clear
+        end
+
         @goto_hash.fetch(token) { |tkn| raise "Token #{tkn} is not supported yet" }.call
         @prev_token = token
-        @index += 1
       end
+
       @output_s << @number_s.to_s unless @number_s.empty?
+      @output_s << @id_s.to_s unless @id_s.empty?
 
       until @operator_s.empty?
         raise "Parentheses Error: Missing ')' at the end!" if @operator_s.last == '('
@@ -140,6 +146,7 @@ module Parser
 
     def initialize
       @chars = [] of Char
+      @is_negative = false
     end
 
     def clear : Identifier
@@ -149,7 +156,7 @@ module Parser
     end
 
     def to_s : String
-      @chars.join.to_s
+      (@is_negative ? "-" : "") + @chars.join.to_s
     end
 
     def empty? : Bool
@@ -177,7 +184,7 @@ module Parser
     end
 
     def to_s : String
-      (is_negative ? "-" : "") + numbers.join.to_s
+      (@is_negative ? "-" : "") + numbers.join.to_s
     end
 
     def empty? : Bool
