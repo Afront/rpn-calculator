@@ -5,7 +5,7 @@ require "./parser"
 # It also accepts expressions that uses the infix notation via the shunting yard algorithm
 # Since this is pretty much identical to rpn-calculator-automata, I might merge them back together
 module RPNCalculator
-  VERSION = "0.2.0"
+  VERSION = "0.2.4"
 
   # The token is contained in this class to provide easy methods
   class Token
