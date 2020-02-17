@@ -24,21 +24,20 @@ module RPNCalculator
       @token.class
     end
 
-    def is_alphanumeric? : Bool
-      # p "Before", token, token.to_s
-      # a = token.to_s.chars.each { |c| p "During", c, token, token.to_s; return false unless c.alphanumeric? } || true
-      # p "uh"
-      # p "After", token, token.to_s
-      # a
-      true
+    def alphanumeric? : Bool
+      token.to_s.chars.each { |c| return false unless c.alphanumeric? } || true
+    end
+
+    def operator? : Bool
+      OPS_HASH.fetch(token.to_s, false) != false
+    end
+
+    def whitespace? : Bool
+      token.to_s.strip.empty?
     end
 
     def is_f? : Bool
       type == Float64 || token.as(String).to_f? != nil
-    end
-
-    def is_op? : Bool
-      OPS_HASH.fetch(token.to_s, false) != false
     end
 
     def is_s? : Bool
@@ -46,7 +45,15 @@ module RPNCalculator
     end
 
     def is_valid? : Bool
-      is_alphanumeric? || is_op?
+      token.to_s.split("").each do |c|
+        tkn = Token.new(c)
+        unless tkn.alphanumeric? || tkn.operator? || tkn.whitespace?
+          p tkn.to_s
+          return false
+        end
+      end
+
+      true
     end
 
     def to_f : Float64
@@ -114,10 +121,8 @@ module RPNCalculator
     end
 
     def check_notation(expression : String) : Notation
-      # p "Expression: #{expression}"
       exp_token = Token.new(expression)
       exp_array = expression.split.map { |c| c.to_i? }
-      # p "Expression Token: #{exp_token.to_s}"
       if exp_token.is_valid?
         Notation::Postfix
       elsif (exp_array[0] && exp_array[-1].is_a? Int32) || expression.includes?(')') || exp_array.size == 1
@@ -147,15 +152,13 @@ module RPNCalculator
     def calculate(input : String) : String
       stack = [] of Token
 
-      #      p input
-
       input.split.each do |string|
         token = Token.new(string)
-        #       p token, string
         raise DivisionByZeroError.new("Error: Attempted dividing by zero") if token == "/" && stack.last == 0
-        stack << if token.is_op?
+        stack << if token.operator?
           arity = OPS_HASH[token.to_s][:proc].as(Proc).arity.to_i
-          raise ArgumentError.new("Error: Not enough arguments!") if token.is_op? && stack.size < arity
+
+          raise ArgumentError.new("Error: Not enough arguments!") if token.operator? && stack.size < arity
           next assign(stack) if token == "="
           stack, popped_tokens = token_pop(stack, arity)
           token.operate(popped_tokens)
