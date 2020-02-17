@@ -53,8 +53,8 @@ module Parser
 
     # or handle_operator
     def goto_operator : Bool
-      if dash_sign_state == DashSignState::Negative && @curr_token == "-"
-        @number_s.is_negative ^= true
+      if dash_sign_state == DashSignState::Negative && ["-", "+"].includes? @curr_token
+        @number_s.is_negative ^= true if @curr_token == "-"
       else
         handle_precedence unless @operator_s.empty?
         @operator_s << @curr_token
@@ -64,6 +64,7 @@ module Parser
     end
 
     def goto_open : Bool
+      p "hi"
       if @prev_token == ")" || @prev_token.to_i?
         handle_precedence unless @operator_s.empty?
         @operator_s << "*"
@@ -97,8 +98,16 @@ module Parser
       {@output_s, @operator_s}
     end
 
-    def is_operator : Bool
+    def operator? : Bool
       OPS_HASH.fetch(@curr_token, false) != false
+    end
+
+    def separator? : Bool
+      ["(", ")"].includes? @curr_token
+    end
+
+    def whitespace? : Bool
+      @curr_token.strip.empty?
     end
 
     # Converts the given *input* expression into a postfix notation expression
@@ -108,10 +117,10 @@ module Parser
     def do_shunting_yard(input : String) : String
       input.split("").each do |token|
         @index += 1
-        next if token.strip.empty?
         @curr_token = token
+        next if whitespace?
         next goto_number if (token.to_i? || token == ".") && @id_s.empty?
-        next @id_s << token unless is_operator # Originally token.alphanumeric? before changing token to String
+        next @id_s << token unless operator? || separator? # Originally token.alphanumeric? before changing token to String
         unless @number_s.empty?
           @output_s << @number_s.to_s
           @dash_sign_state = DashSignState::Subtract

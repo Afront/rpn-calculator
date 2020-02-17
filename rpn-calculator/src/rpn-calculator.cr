@@ -17,23 +17,32 @@ module RPNCalculator
     @@factorial_memo = {} of Float64 => Float64
 
     def initialize(@token)
-      # raise "Token is invalid!" if !is_valid?
+      # raise "Token is invalid!" if !valid?
     end
 
     def type : Class
       @token.class
     end
 
-    def alphanumeric? : Bool
+    def alphanumeric?(c : String | Char = token) : Bool
       token.to_s.chars.each { |c| return false unless c.alphanumeric? } || true
     end
 
-    def operator? : Bool
-      OPS_HASH.fetch(token.to_s, false) != false
+    def operator?(c : String | Char = token) : Bool
+      OPS_HASH.fetch(c.to_s, false) != false
     end
 
-    def whitespace? : Bool
-      token.to_s.strip.empty?
+    def whitespace?(c : String | Char = token) : Bool
+      c.to_s.strip.empty?
+    end
+
+    def valid? : Bool
+      alphanumeric? || operator?
+    end
+
+    def postfix? : Bool
+      token_str = token.to_s
+      valid? || ((token_str[0].alphanumeric? && operator? token_str[-1]))
     end
 
     def is_f? : Bool
@@ -42,18 +51,6 @@ module RPNCalculator
 
     def is_s? : Bool
       type == String
-    end
-
-    def is_valid? : Bool
-      token.to_s.split("").each do |c|
-        tkn = Token.new(c)
-        unless tkn.alphanumeric? || tkn.operator? || tkn.whitespace?
-          p tkn.to_s
-          return false
-        end
-      end
-
-      true
     end
 
     def to_f : Float64
@@ -123,7 +120,7 @@ module RPNCalculator
     def check_notation(expression : String) : Notation
       exp_token = Token.new(expression)
       exp_array = expression.split.map { |c| c.to_i? }
-      if exp_token.is_valid?
+      if exp_token.postfix?
         Notation::Postfix
       elsif (exp_array[0] && exp_array[-1].is_a? Int32) || expression.includes?(')') || exp_array.size == 1
         Notation::Infix
@@ -202,11 +199,11 @@ module RPNCalculator
 
         begin
           next if input.strip.empty?
-          puts calculate case check_notation input
+          puts calculate case (p check_notation input)
           when Notation::Postfix
             input
           when Notation::Infix
-            handler.do_shunting_yard input
+            p handler.do_shunting_yard input
           when Notation::Prefix
             raise "Prefix to Postfix transpiler not implemented yet!"
           else
