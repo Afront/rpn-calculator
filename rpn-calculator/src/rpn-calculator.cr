@@ -4,7 +4,7 @@ require "./parser"
 # RPNCalculator is a calculator that uses the postfix notation.
 # It also accepts expressions that uses the infix notation via the shunting yard algorithm
 module RPNCalculator
-  VERSION = "0.2.0"
+  VERSION = "0.2.3"
 
   class Calculator
     include Parser
