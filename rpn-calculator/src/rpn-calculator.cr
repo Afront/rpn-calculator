@@ -3,11 +3,14 @@ require "./parser"
 
 # RPNCalculator is a calculator that uses the postfix notation.
 # It also accepts expressions that uses the infix notation via the shunting yard algorithm
+# Since this is pretty much identical to rpn-calculator-automata, I might merge them back together
 module RPNCalculator
   VERSION = "0.2.0"
 
+  # The token is contained in this class to provide easy methods
   class Token
     include Parser
+
     getter token : String | Float64
 
     @@var_hash = {} of String => Float64
@@ -22,7 +25,12 @@ module RPNCalculator
     end
 
     def is_alphanumeric? : Bool
-      token.to_s.chars.each { |c| return false unless c.alphanumeric? } || true
+      # p "Before", token, token.to_s
+      # a = token.to_s.chars.each { |c| p "During", c, token, token.to_s; return false unless c.alphanumeric? } || true
+      # p "uh"
+      # p "After", token, token.to_s
+      # a
+      true
     end
 
     def is_f? : Bool
@@ -30,7 +38,7 @@ module RPNCalculator
     end
 
     def is_op? : Bool
-      OPS_HASH.fetch(token.to_s.char_at(-1), false) != false
+      OPS_HASH.fetch(token.to_s, false) != false
     end
 
     def is_s? : Bool
@@ -80,12 +88,12 @@ module RPNCalculator
       when 1
         if token == "!"
           n = popped_tokens[0]
-          @@factorial_memo[n.to_f] ||= OPS_HASH[token.to_s[0]][:proc].as(Proc(Float64, Float64)).call(n.to_f).to_f
+          @@factorial_memo[n.to_f] ||= OPS_HASH[token.to_s][:proc].as(Proc(Float64, Float64)).call(n.to_f).to_f
         else
           result = OPS_HASH[token.to_s[0]][:proc].as(Proc(Float64, Float64)).call(*popped_tokens.as(Tuple(Float64)))
         end
       when 2
-        OPS_HASH[token.to_s[0]][:proc].as(Proc(Float64, Float64, Float64)).call(*popped_tokens.as(Tuple(Float64, Float64)))
+        OPS_HASH[token.to_s][:proc].as(Proc(Float64, Float64, Float64)).call(*popped_tokens.as(Tuple(Float64, Float64)))
       when 3
         -3.14
         #        OPS_HASH[token[0].to_s][:proc].as(Proc(Float64, Float64, Float64, Float64)).call(*popped_tokens.as(Tuple(Float64, Float64, Float64)))
@@ -106,8 +114,10 @@ module RPNCalculator
     end
 
     def check_notation(expression : String) : Notation
+      # p "Expression: #{expression}"
       exp_token = Token.new(expression)
       exp_array = expression.split.map { |c| c.to_i? }
+      # p "Expression Token: #{exp_token.to_s}"
       if exp_token.is_valid?
         Notation::Postfix
       elsif (exp_array[0] && exp_array[-1].is_a? Int32) || expression.includes?(')') || exp_array.size == 1
@@ -137,11 +147,14 @@ module RPNCalculator
     def calculate(input : String) : String
       stack = [] of Token
 
+      #      p input
+
       input.split.each do |string|
         token = Token.new(string)
-        raise DivisionByZeroError.new("Error: Attempted dividing by zero") if token == '/' && stack.last == 0
+        #       p token, string
+        raise DivisionByZeroError.new("Error: Attempted dividing by zero") if token == "/" && stack.last == 0
         stack << if token.is_op?
-          arity = OPS_HASH[string[-1]][:proc].as(Proc).arity.to_i
+          arity = OPS_HASH[token.to_s][:proc].as(Proc).arity.to_i
           raise ArgumentError.new("Error: Not enough arguments!") if token.is_op? && stack.size < arity
           next assign(stack) if token == "="
           stack, popped_tokens = token_pop(stack, arity)

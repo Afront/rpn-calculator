@@ -1,15 +1,15 @@
 module Parser
   OPS_HASH = {
-    '+' => {:precedence => 2, :associativity => :left, :proc => ->(b : Float64, a : Float64) { a + b }},
-    '-' => {:precedence => 2, :associativity => :left, :proc => ->(b : Float64, a : Float64) { a - b }},
-    '*' => {:precedence => 3, :associativity => :left, :proc => ->(b : Float64, a : Float64) { a * b }},
-    '×' => {:precedence => 3, :associativity => :left, :proc => ->(b : Float64, a : Float64) { a * b }},
-    '/' => {:precedence => 3, :associativity => :left, :proc => ->(b : Float64, a : Float64) { a / b }},
-    '÷' => {:precedence => 3, :associativity => :left, :proc => ->(b : Float64, a : Float64) { a / b }},
-    '%' => {:precedence => 3, :associativity => :left, :proc => ->(b : Float64, a : Float64) { a % b }},
-    '^' => {:precedence => 4, :associativity => :right, :proc => ->(b : Float64, a : Float64) { a ** b }},
-    '=' => {:precedence => 1, :associativity => :left, :proc => ->(b : Float64, a : String) { b }},
-    '!' => {:precedence => 5, :associativity => :right, :proc => ->(n : Float64) { raise "Cannot find the factorial of a negative integer" if n < 0
+    "+" => {:precedence => 2, :associativity => :left, :proc => ->(b : Float64, a : Float64) { a + b }},
+    "-" => {:precedence => 2, :associativity => :left, :proc => ->(b : Float64, a : Float64) { a - b }},
+    "*" => {:precedence => 3, :associativity => :left, :proc => ->(b : Float64, a : Float64) { a * b }},
+    "×" => {:precedence => 3, :associativity => :left, :proc => ->(b : Float64, a : Float64) { a * b }},
+    "/" => {:precedence => 3, :associativity => :left, :proc => ->(b : Float64, a : Float64) { a / b }},
+    "÷" => {:precedence => 3, :associativity => :left, :proc => ->(b : Float64, a : Float64) { a / b }},
+    "%" => {:precedence => 3, :associativity => :left, :proc => ->(b : Float64, a : Float64) { a % b }},
+    "^" => {:precedence => 4, :associativity => :right, :proc => ->(b : Float64, a : Float64) { a ** b }},
+    "=" => {:precedence => 1, :associativity => :left, :proc => ->(b : Float64, a : String) { b }},
+    "!" => {:precedence => 5, :associativity => :right, :proc => ->(n : Float64) { raise "Cannot find the factorial of a negative integer" if n < 0
     (1..n.to_i).reduce(1.0) { |a, b| a*b*1.0 } }},
   }
 
@@ -24,28 +24,28 @@ module Parser
     def initialize
       @hash = {} of String => Float64
       @output_s = [] of String
-      @operator_s = [] of Char
+      @operator_s = [] of String
       @number_s = Number.new
       @id_s = Identifier.new
-      @prev_token = ' '
-      @curr_token = ' '
+      @prev_token = ""
+      @curr_token = ""
       @dash_sign_state = DashSignState::Negative
       @index = 0
-      @goto_hash = {} of Char => Proc(Bool)
+      @goto_hash = {} of String => Proc(Bool)
       load_goto_hash
     end
 
     def load_goto_hash : Hash
-      @goto_hash = {'(' => ->{ goto_open }, ')' => ->{ goto_closed }}
+      @goto_hash = {"(" => ->{ goto_open }, ")" => ->{ goto_closed }}
       OPS_HASH.each_key do |op|
-        @goto_hash.merge!({op.as(Char) => ->{ goto_operator }})
+        @goto_hash.merge!({op => ->{ goto_operator }})
       end
       goto_hash
     end
 
     # or handle_number
     def goto_number : Bool
-      @operator_s << '*' if @prev_token == ')'
+      @operator_s << "*" if @prev_token == ")"
       @prev_token = @curr_token
       @number_s.numbers << @curr_token
       true
@@ -53,7 +53,7 @@ module Parser
 
     # or handle_operator
     def goto_operator : Bool
-      if dash_sign_state == DashSignState::Negative && @curr_token == '-'
+      if dash_sign_state == DashSignState::Negative && @curr_token == "-"
         @number_s.is_negative ^= true
       else
         handle_precedence unless @operator_s.empty?
@@ -64,31 +64,31 @@ module Parser
     end
 
     def goto_open : Bool
-      if @prev_token == ')' || @prev_token.to_i?
+      if @prev_token == ")" || @prev_token.to_i?
         handle_precedence unless @operator_s.empty?
-        @operator_s << '*'
+        @operator_s << "*"
       end
-      @operator_s << '('
+      @operator_s << "("
       @dash_sign_state = DashSignState::Negative
       true
     end
 
     def goto_closed : Bool
-      while @operator_s.last != '('
+      while @operator_s.last != "("
         @output_s << @operator_s.pop.to_s
       end
       raise "Parentheses Error: Missing '(' to match the ')' @ column #{@index + 1}!" if @operator_s.empty?
-      @operator_s.pop if @operator_s.last == '('
+      @operator_s.pop if @operator_s.last == "("
       @dash_sign_state = DashSignState::Subtract
       true
     end
 
-    def handle_precedence : Tuple(Array(String), Array(Char))
-      unless [@operator_s.last, @curr_token].includes? '('
+    def handle_precedence : Tuple(Array(String), Array(String))
+      unless [@operator_s.last, @curr_token].includes? "("
         top_precedence = OPS_HASH[@operator_s.last][:precedence].as(Int32)
         tkn_precedence = OPS_HASH[@curr_token][:precedence].as(Int32)
         tkn_associativity = OPS_HASH[@curr_token][:associativity].as(Symbol)
-        while !@operator_s.empty? && @operator_s.last != '(' &&
+        while !@operator_s.empty? && @operator_s.last != "(" &&
               ((top_precedence > tkn_precedence) ||
               (top_precedence == tkn_precedence && tkn_associativity == :left))
           @output_s << @operator_s.pop.to_s
@@ -106,13 +106,12 @@ module Parser
     # do_shunting_yard("1+2") # => "1 2 +"
     # ```
     def do_shunting_yard(input : String) : String
-      input.chars.each do |token|
+      input.split("").each do |token|
         @index += 1
-        next if token.whitespace?
+        next if token.strip.empty?
         @curr_token = token
-        next goto_number if (token.to_i? || token == '.') && @id_s.empty?
-        next @id_s << token if token.alphanumeric?
-
+        next goto_number if (token.to_i? || token == ".") && @id_s.empty?
+        next @id_s << token unless is_operator # Originally token.alphanumeric? before changing token to String
         unless @number_s.empty?
           @output_s << @number_s.to_s
           @dash_sign_state = DashSignState::Subtract
@@ -133,11 +132,11 @@ module Parser
       @output_s << @id_s.to_s unless @id_s.empty?
 
       until @operator_s.empty?
-        raise "Parentheses Error: Missing ')' at the end!" if @operator_s.last == '('
+        raise "Parentheses Error: Missing ')' at the end!" if @operator_s.last == "("
         @output_s << @operator_s.pop.to_s
       end
 
-      @output_s.join(' ')
+      @output_s.join(" ")
     end
   end
 
@@ -145,7 +144,7 @@ module Parser
     property chars
 
     def initialize
-      @chars = [] of Char
+      @chars = [] of String
       @is_negative = false
     end
 
@@ -163,7 +162,7 @@ module Parser
       @chars.empty?
     end
 
-    def <<(token : Char) : Identifier
+    def <<(token : String) : Identifier
       @chars << token
       self
     end
@@ -173,7 +172,7 @@ module Parser
     property numbers, is_negative
 
     def initialize
-      @numbers = [] of Char
+      @numbers = [] of String
       @is_negative = false
     end
 
@@ -191,7 +190,7 @@ module Parser
       @numbers.empty?
     end
 
-    def <<(token : Char) : Number
+    def <<(token : String) : Number
       @numbers << token
       self
     end
