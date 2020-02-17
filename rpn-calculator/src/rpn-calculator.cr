@@ -202,7 +202,7 @@ module RPNCalculator
 
         begin
           next if input.strip.empty?
-          puts calculate case (p check_notation input)
+          puts calculate case check_notation input
           when Notation::Postfix
             input
           when Notation::Infix
