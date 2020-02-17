@@ -4,6 +4,10 @@ require "./parser"
 # RPNCalculator is a calculator that uses the postfix notation.
 # It also accepts expressions that uses the infix notation via the shunting yard algorithm
 # Since this is pretty much identical to rpn-calculator-automata, I might merge them back together
+# TODO: Add documentation
+# TODO: Revamp specs
+# TODO: Refactor and clean up code
+
 module RPNCalculator
   VERSION = "0.2.4"
 
@@ -24,16 +28,16 @@ module RPNCalculator
       @token.class
     end
 
-    def alphanumeric?(c : String | Char = token) : Bool
-      token.to_s.chars.each { |c| return false unless c.alphanumeric? } || true
+    def alphanumeric?(tkn : String | Char = token) : Bool
+      tkn.to_s.chars.each { |c| return false unless c.alphanumeric? } || true
     end
 
-    def operator?(c : String | Char = token) : Bool
-      OPS_HASH.fetch(c.to_s, false) != false
+    def operator?(tkn : String | Char = token) : Bool
+      OPS_HASH.fetch(tkn.to_s, false) != false
     end
 
-    def whitespace?(c : String | Char = token) : Bool
-      c.to_s.strip.empty?
+    def whitespace?(tkn : String | Char = token) : Bool
+      tkn.to_s.strip.empty?
     end
 
     def valid? : Bool
@@ -80,7 +84,7 @@ module RPNCalculator
     end
 
     def ==(other : Token) : Bool
-      token = Token.token
+      token == Token.token
     end
 
     def self.var_hash
@@ -94,7 +98,7 @@ module RPNCalculator
           n = popped_tokens[0]
           @@factorial_memo[n.to_f] ||= OPS_HASH[token.to_s][:proc].as(Proc(Float64, Float64)).call(n.to_f).to_f
         else
-          result = OPS_HASH[token.to_s[0]][:proc].as(Proc(Float64, Float64)).call(*popped_tokens.as(Tuple(Float64)))
+          OPS_HASH[token.to_s[0]][:proc].as(Proc(Float64, Float64)).call(*popped_tokens.as(Tuple(Float64)))
         end
       when 2
         OPS_HASH[token.to_s][:proc].as(Proc(Float64, Float64, Float64)).call(*popped_tokens.as(Tuple(Float64, Float64)))
@@ -135,7 +139,6 @@ module RPNCalculator
     end
 
     def assign(stack : Array(Token)) : Array(Token)
-      arity = OPS_HASH['='][:proc].as(Proc).arity.to_i
       value = stack.pop
       Token.var_hash[stack.pop.to_s] = value.to_f
       stack << value
