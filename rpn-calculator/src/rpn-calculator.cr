@@ -205,7 +205,7 @@ module RPNCalculator
           when Notation::Infix
             p handler.do_shunting_yard input
           when Notation::Prefix
-            raise "Prefix to Postfix transpiler not implemented yet!"
+            input.split.reverse.join(" ")
           else
             raise "Should not occur"
           end
