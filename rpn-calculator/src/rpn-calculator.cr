@@ -58,7 +58,7 @@ module RPNCalculator
         stack << if token.operator?
           arity = OPS_HASH[token.to_s][:proc].as(Proc).arity.to_i
 
-          raise ArgumentError.new("Error: Not enough arguments!") if token.operator? && stack.size < arity
+          raise ArgumentError.new("Error: Not enough arguments!") if stack.size < arity
           next assign(stack) if token == "="
           stack, popped_tokens = token_pop(stack, arity)
           token.operate(popped_tokens)
@@ -97,6 +97,7 @@ module RPNCalculator
     end
 
     def calculate(input : String) : Float64
+      input = input.strip
       handler = ShuntingYardHandler.new
 
       calculate_rpn case check_notation input

@@ -42,7 +42,7 @@ module Parser
 
     def postfix? : Bool
       token_str = token.to_s
-      valid? || ((token_str[0].alphanumeric? && operator? token_str[-1]))
+      valid? || (((token_str[0].alphanumeric? || ['-', '+'].includes? token_str[0]) && operator? token_str[-1]))
     end
 
     def to_f : Float64
@@ -175,7 +175,6 @@ module Parser
     end
 
     private def goto_open : Bool
-      p "hi"
       if @prev_token == ")" || @prev_token.to_i?
         handle_precedence unless @operator_s.empty?
         @operator_s << "*"
