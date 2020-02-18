@@ -49,7 +49,7 @@ module RPNCalculator
     # ```
     # calculate("1 2 +") # => 3
     # ```
-    private def calculate_rpn(input : String) : String
+    private def calculate_rpn(input : String) : Float64
       stack = [] of Token
 
       input.split.each do |string|
@@ -67,7 +67,7 @@ module RPNCalculator
         end
       end
       raise ArgumentError.new("Error: Missing operator!") if stack.size > 1
-      stack.pop.to_i?.to_s
+      stack.pop.to_f
     end
 
     # Calculates the result based on the *input* expression given
@@ -92,19 +92,27 @@ module RPNCalculator
       {stack, arg_tuple}
     end
 
-    def calculate(input : String) : String
+    private def to_i128?(n : Float64) : Float64 | Int128
+      Parser.int128?(n.to_f) ? n.to_i128 : n.to_f
+    end
+
+    def calculate(input : String) : Float64
       handler = ShuntingYardHandler.new
 
       calculate_rpn case check_notation input
       when Notation::Postfix
         input
       when Notation::Infix
-        p handler.do_shunting_yard input
+        handler.do_shunting_yard input
       when Notation::Prefix
         input.split.reverse.join(" ")
       else
         raise "Should not occur"
       end
+    end
+
+    def format(input : String) : String
+      to_i128?(calculate input).to_s
     end
 
     # Is an interactive prompt that allows users to get the results of any legal expresssion
@@ -115,7 +123,7 @@ module RPNCalculator
       until ["abort", "exit", "quit", "q"].includes?(input = (Readline.readline(prompt: "> ", add_history: true) || "").to_s)
         begin
           next if input.strip.empty?
-          puts calculate input
+          puts format input
         rescue error_msg : Exception
           puts error_msg, error_msg.backtrace
         end

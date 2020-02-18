@@ -63,10 +63,6 @@ module Parser
       end
     end
 
-    def to_i? : Int32 | Float64
-      Parser.int?(token.to_f) ? token.to_i : token.to_f
-    end
-
     def to_s : String
       token.to_s
     end
@@ -102,12 +98,12 @@ module Parser
     end
   end
 
-  def self.int?(n : Float64) : Bool
-    n.to_f == n.to_i
+  def self.int128?(n : Float64) : Bool
+    n.to_f == n.to_i128
   end
 
   private def self.factorial(n : Float64) : Float64
-    if int?(n)
+    if int128?(n)
       raise "Cannot find the factorial of a negative integer" if n < 0
       (1..n.to_i).reduce(1.0) { |a, b| a*b*1.0 }
     else
