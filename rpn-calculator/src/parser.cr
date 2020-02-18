@@ -1,4 +1,10 @@
 module Parser
+  class FactorialOfNegativeIntegersError < Exception
+    def initialize(message : String = "Cannot find the factorial of a negative integer")
+      super message
+    end
+  end
+
   # The token is contained in this class to provide easy methods
   class Token
     include Parser
@@ -51,7 +57,11 @@ module Parser
 
     def postfix? : Bool
       token_str = token.to_s
-      valid? || (((token_str[0].alphanumeric? || ['-', '+'].includes? token_str[0]) && operator? token_str[-1]))
+      valid? ||
+        ((token_str[0].alphanumeric? ||
+          ['-', '+'].includes? token_str[0]) &&
+          (operator? token_str[-1]) &&
+          token_str[-2].whitespace?)
     end
 
     def to_f : Float64
@@ -113,7 +123,7 @@ module Parser
 
   private def self.factorial(n : Float64) : Float64
     if int128?(n)
-      raise "Cannot find the factorial of a negative integer" if n < 0
+      raise FactorialOfNegativeIntegersError.new if n < 0
       (1..n.to_i).reduce(1.0) { |a, b| a*b*1.0 }
     else
       Math.gamma(n + 1)
@@ -311,7 +321,8 @@ module Parser
     end
 
     def to_s : String
-      (@is_negative ? "-" : "") + numbers.join.to_s
+      num_string = numbers.join.to_s
+      (@is_negative && num_string != "0" ? "-" : "") + num_string
     end
 
     def empty? : Bool

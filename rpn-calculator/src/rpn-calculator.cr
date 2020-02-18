@@ -54,7 +54,7 @@ module RPNCalculator
 
       input.split.each do |string|
         token = Token.new(string)
-        raise DivisionByZeroError.new("Error: Attempted dividing by zero") if token == "/" && stack.last == 0
+        raise DivisionByZeroError.new("Error: Attempted dividing by zero") if token == "/" && stack.last == "0"
         stack << if token.operator?
           arity = OPS_HASH[token.to_s][:proc].as(Proc).arity.to_i
 
