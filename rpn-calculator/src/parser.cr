@@ -16,33 +16,33 @@ module Parser
       @token.class
     end
 
-    def alphanumeric?(tkn : String | Char = token) : Bool
+    private def alphanumeric?(tkn : String | Char = token) : Bool
       tkn.to_s.chars.each { |c| return false unless c.alphanumeric? } || true
+    end
+
+    private def float? : Bool
+      type == Float64 || token.as(String).to_f? != nil
     end
 
     def operator?(tkn : String | Char = token) : Bool
       OPS_HASH.fetch(tkn.to_s, false) != false
     end
 
-    def whitespace?(tkn : String | Char = token) : Bool
+    private def string? : Bool
+      type == String
+    end
+
+    private def whitespace?(tkn : String | Char = token) : Bool
       tkn.to_s.strip.empty?
     end
 
-    def valid? : Bool
+    private def valid? : Bool
       alphanumeric? || operator?
     end
 
     def postfix? : Bool
       token_str = token.to_s
       valid? || ((token_str[0].alphanumeric? && operator? token_str[-1]))
-    end
-
-    def is_f? : Bool
-      type == Float64 || token.as(String).to_f? != nil
-    end
-
-    def is_s? : Bool
-      type == String
     end
 
     def to_f : Float64
@@ -56,7 +56,7 @@ module Parser
 
       trimmed_token = token_arr.join
 
-      if is_f?
+      if float?
         token.to_f
       else
         @@var_hash.fetch(trimmed_token, trimmed_token).to_f * is_negative
@@ -134,7 +134,7 @@ module Parser
       load_goto_hash
     end
 
-    def load_goto_hash : Hash
+    private def load_goto_hash : Hash
       @goto_hash = {"(" => ->{ goto_open }, ")" => ->{ goto_closed }}
       OPS_HASH.each_key do |op|
         @goto_hash.merge!({op => ->{ goto_operator }})
@@ -143,7 +143,7 @@ module Parser
     end
 
     # or handle_number
-    def goto_number : Bool
+    private def goto_number : Bool
       @operator_s << "*" if @prev_token == ")"
       @prev_token = @curr_token
       @number_s.numbers << @curr_token
@@ -151,7 +151,7 @@ module Parser
     end
 
     # or handle_operator
-    def goto_operator : Bool
+    private def goto_operator : Bool
       if dash_sign_state == DashSignState::Negative && ["-", "+"].includes? @curr_token
         @number_s.is_negative ^= true if @curr_token == "-"
       else
@@ -162,7 +162,7 @@ module Parser
       true
     end
 
-    def goto_open : Bool
+    private def goto_open : Bool
       p "hi"
       if @prev_token == ")" || @prev_token.to_i?
         handle_precedence unless @operator_s.empty?
@@ -173,7 +173,7 @@ module Parser
       true
     end
 
-    def goto_closed : Bool
+    private def goto_closed : Bool
       while @operator_s.last != "("
         @output_s << @operator_s.pop.to_s
       end
@@ -183,7 +183,7 @@ module Parser
       true
     end
 
-    def handle_precedence : Tuple(Array(String), Array(String))
+    private def handle_precedence : Tuple(Array(String), Array(String))
       unless [@operator_s.last, @curr_token].includes? "("
         top_precedence = OPS_HASH[@operator_s.last][:precedence].as(Int32)
         tkn_precedence = OPS_HASH[@curr_token][:precedence].as(Int32)
@@ -197,15 +197,15 @@ module Parser
       {@output_s, @operator_s}
     end
 
-    def operator? : Bool
+    private def operator? : Bool
       OPS_HASH.fetch(@curr_token, false) != false
     end
 
-    def separator? : Bool
+    private def separator? : Bool
       ["(", ")"].includes? @curr_token
     end
 
-    def whitespace? : Bool
+    private def whitespace? : Bool
       @curr_token.strip.empty?
     end
 
@@ -248,7 +248,7 @@ module Parser
     end
   end
 
-  class Identifier
+  private class Identifier
     property chars
 
     def initialize
@@ -276,7 +276,7 @@ module Parser
     end
   end
 
-  class Number
+  private class Number
     property numbers, is_negative
 
     def initialize

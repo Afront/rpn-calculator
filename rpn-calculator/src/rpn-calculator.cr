@@ -21,7 +21,7 @@ module RPNCalculator
       Error
     end
 
-    def check_notation(expression : String) : Notation
+    private def check_notation(expression : String) : Notation
       exp_token = Token.new(expression)
       exp_array = expression.split.map { |c| c.to_i? }
       if exp_token.postfix?
@@ -38,7 +38,7 @@ module RPNCalculator
       end
     end
 
-    def assign(stack : Array(Token)) : Array(Token)
+    private def assign(stack : Array(Token)) : Array(Token)
       value = stack.pop
       Token.var_hash[stack.pop.to_s] = value.to_f
       stack << value
@@ -49,7 +49,7 @@ module RPNCalculator
     # ```
     # calculate("1 2 +") # => 3
     # ```
-    def calculate(input : String) : String
+    private def calculate_rpn(input : String) : String
       stack = [] of Token
 
       input.split.each do |string|
@@ -74,7 +74,7 @@ module RPNCalculator
     # ```
     # calculate("1 2 +") # => 3
     # ```
-    def token_pop(stack : Array(Token), arity : Int32) : Tuple(Array(Token), Tuple(Float64) | Tuple(Float64, Float64) | Tuple(Float64, Float64, Float64))
+    private def token_pop(stack : Array(Token), arity : Int32) : Tuple(Array(Token), Tuple(Float64) | Tuple(Float64, Float64) | Tuple(Float64, Float64, Float64))
       popped_tokens = [] of Float64
       arity.times { popped_tokens << stack.pop.to_f }
       # Convert popped_tokens to numbers only -> var to numbers method
@@ -92,26 +92,30 @@ module RPNCalculator
       {stack, arg_tuple}
     end
 
+    def calculate(input : String) : String
+      handler = ShuntingYardHandler.new
+
+      calculate_rpn case check_notation input
+      when Notation::Postfix
+        input
+      when Notation::Infix
+        p handler.do_shunting_yard input
+      when Notation::Prefix
+        input.split.reverse.join(" ")
+      else
+        raise "Should not occur"
+      end
+    end
+
     # Is an interactive prompt that allows users to get the results of any legal expresssion
     # ```
     # repl # => >
     # ```
     def repl
       until ["abort", "exit", "quit", "q"].includes?(input = (Readline.readline(prompt: "> ", add_history: true) || "").to_s)
-        handler = ShuntingYardHandler.new
-
         begin
           next if input.strip.empty?
-          puts calculate case check_notation input
-          when Notation::Postfix
-            input
-          when Notation::Infix
-            p handler.do_shunting_yard input
-          when Notation::Prefix
-            input.split.reverse.join(" ")
-          else
-            raise "Should not occur"
-          end
+          puts calculate input
         rescue error_msg : Exception
           puts error_msg, error_msg.backtrace
         end
@@ -122,3 +126,4 @@ end
 
 calc = RPNCalculator::Calculator.new
 calc.repl
+# p RPNCalculator::Calculator::Token.new("a").postfix?
