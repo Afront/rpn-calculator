@@ -5,7 +5,16 @@ module Parser
 
     getter token : String | Float64
 
-    @@var_hash = {} of String => Float64
+    @@var_hash = {
+      "e"   => Math::E,
+      "PI"  => Math::PI,
+      "π"   => Math::PI,
+      "TAU" => 2 * Math::PI,
+      "τ"   => 2 * Math::PI,
+      "PHI" => 0.5 + Math.sqrt(5)/2,
+      "φ"   => 0.5 + Math.sqrt(5)/2,
+      "ϕ"   => 0.5 + Math.sqrt(5)/2,
+    }
     @@factorial_memo = {} of Float64 => Float64
 
     def initialize(@token)
