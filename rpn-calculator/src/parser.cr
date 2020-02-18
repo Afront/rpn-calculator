@@ -63,6 +63,10 @@ module Parser
       end
     end
 
+    def to_i? : Int32 | Float64
+      Parser.int?(token.to_f) ? token.to_i : token.to_f
+    end
+
     def to_s : String
       token.to_s
     end

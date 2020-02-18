@@ -67,7 +67,7 @@ module RPNCalculator
         end
       end
       raise ArgumentError.new("Error: Missing operator!") if stack.size > 1
-      sprintf("%g", stack.pop.to_f) # or stack[0].to_f
+      stack.pop.to_i?.to_s
     end
 
     # Calculates the result based on the *input* expression given
