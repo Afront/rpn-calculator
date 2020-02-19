@@ -57,11 +57,10 @@ module Parser
 
     def postfix? : Bool
       token_str = token.to_s
-      valid? ||
-        ((token_str[0].alphanumeric? ||
-          ['-', '+'].includes? token_str[0]) &&
-          (operator? token_str[-1]) &&
-          token_str[-2].whitespace?)
+      ((token_str[0].alphanumeric? ||
+        ['-', '+'].includes? token_str[0]) &&
+        (operator? token_str[-1]) &&
+        token_str[-2].whitespace?)
     end
 
     def to_f : Float64
@@ -181,6 +180,14 @@ module Parser
       true
     end
 
+    # or handle_identifier
+    private def goto_identifier : Bool
+      @operator_s << "*" if @prev_token == ")" || @prev_token.to_i?
+      @prev_token = @curr_token
+      @id_s << @curr_token
+      true
+    end
+
     # or handle_operator
     private def goto_operator : Bool
       if dash_sign_state == DashSignState::Negative && ["-", "+"].includes? @curr_token
@@ -194,7 +201,7 @@ module Parser
     end
 
     private def goto_open : Bool
-      if @prev_token == ")" || @prev_token.to_i?
+      if @prev_token == ")" || @prev_token[-1].alphanumeric?
         handle_precedence unless @operator_s.empty?
         @operator_s << "*"
       end
@@ -249,7 +256,8 @@ module Parser
         @curr_token = token
         next if whitespace?
         next goto_number if (token.to_i? || token == ".") && @id_s.empty?
-        next @id_s << token unless operator? || separator? # Originally token.alphanumeric? before changing token to String
+        next goto_identifier unless operator? || separator? # Originally token.alphanumeric? before changing token to String
+
         unless @number_s.empty?
           @output_s << @number_s.to_s
           @dash_sign_state = DashSignState::Subtract
