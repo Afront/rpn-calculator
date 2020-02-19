@@ -221,8 +221,10 @@ describe RPNCalculator do
       it "can correctly evaluate 'polynomials'" do
         calc.calculate("/ 3 - + 1 2 2").should eq(3.0)
         calc.calculate("/ - 3 + 1 2 2").should eq(0.0)
+        calc.calculate("b 1 a 4 1 2 / ^ = + a + =").should eq(5.0)
         calc.calculate("= b + 1 + a = ^ / 4 1 2 a").should eq(5.0)
-        calc.calculate("+ / ! - 10 1 * 2 ^ 3 4 3.14 ").should eq(14696643.14)
+        calc.calculate("+ * / ! - 10 1 2 ^ 3 4 3.14").should eq(14696643.14)
+        calc.calculate("+ / ! - 10 1 * 2 ^ 3 4 PI ").should eq(2240 + Math::PI)
       end
     end
   end

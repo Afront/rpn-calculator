@@ -143,6 +143,11 @@ module Parser
     def operate(stack : Array(Token)) : Array(Token)
       raise ArgumentError.new("Error: Not enough arguments!") if stack.size < arity
 
+      if token == "="
+        value = stack.pop.to_f
+        return stack << Token.new(stack.pop.assign(value))
+      end
+
       stack, popped_tokens = token_pop(stack)
 
       stack << Token.new(case arity
@@ -161,6 +166,10 @@ module Parser
         raise "Something is wrong with the program. Please raise an issue if this occurs"
       end)
       stack
+    end
+
+    def assign(value : Float64) : Float64
+      @@var_hash[token.to_s] = value
     end
   end
 
@@ -186,7 +195,7 @@ module Parser
     "÷" => {:precedence => 3, :associativity => :left, :proc => ->(b : Float64, a : Float64) { a / b }},
     "%" => {:precedence => 3, :associativity => :left, :proc => ->(b : Float64, a : Float64) { a % b }},
     "^" => {:precedence => 4, :associativity => :right, :proc => ->(b : Float64, a : Float64) { a ** b }},
-    "=" => {:precedence => 1, :associativity => :left, :proc => ->(n : Float64) { n }},
+    "=" => {:precedence => 1, :associativity => :left, :proc => ->(b : Float64, a : String) { Token.new(a).assign(b) }},
     "!" => {:precedence => 5, :associativity => :right, :proc => ->(n : Float64) { factorial n }},
   }
 
@@ -338,14 +347,13 @@ module Parser
     stack = [] of Token
     input.split.reverse_each do |token_str|
       token = Token.new(token_str)
-      if token.operator?
-        stack, popped_tokens = token.token_pop(stack)
-        stack << Token.new "#{popped_tokens.join(" ")} #{token.to_s}"
+      stack << if token.operator?
+        Token.new "#{1.upto(token.arity).map { stack.pop.to_s }.join(" ")} #{token.to_s}"
       else
-        stack << token
+        token
       end
     end
-    p stack.map { |token| token.to_s }.join(' ')
+    stack.map { |token| token.to_s }.join(' ')
   end
 
   def to_postfix(input : String) : String

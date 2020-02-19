@@ -14,13 +14,6 @@ module RPNCalculator
   class Calculator
     include Parser
 
-    private def assign(stack : Array(Token)) : Array(Token)
-      value = stack.pop
-      Token.var_hash[stack.pop.to_s] = value.to_f
-      stack << value
-      stack
-    end
-
     # Calculates the result based on the *input* expression given
     # ```
     # calculate("1 2 +") # => 3
@@ -30,8 +23,6 @@ module RPNCalculator
 
       input.split.each do |string|
         token = Token.new(string)
-        p stack.last
-        p "hi"
         raise DivisionByZeroError.new("Error: Attempted dividing by zero") if token == "/" && ["0", "0.0"].includes?(stack.last)
         stack << if token.operator?
           arity = OPS_HASH[token.to_s][:proc].as(Proc).arity.to_i
@@ -54,7 +45,6 @@ module RPNCalculator
         token = Token.new(string)
         raise DivisionByZeroError.new("Error: Attempted dividing by zero") if token == "/" && ["0", "0.0"].includes? stack.last.to_s
         if token.operator?
-          next assign(stack) if token == "="
           stack = token.operate(stack)
         else
           stack << token
@@ -70,7 +60,7 @@ module RPNCalculator
 
     def calculate(input : String) : Float64
       input = input.strip
-      p calculate_rpn to_postfix(input)
+      calculate_rpn to_postfix(input)
     end
 
     def format(input : String) : String
