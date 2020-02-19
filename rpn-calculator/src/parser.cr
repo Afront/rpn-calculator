@@ -278,6 +278,21 @@ module Parser
     end
   end
 
+  def prefix_to_postfix(input : String) : String
+    stack = [] of String
+    input.split.reverse_each do |token_str|
+      p "Before #{token_str} #{stack}"
+      token = Token.new(token_str)
+      if token.operator?
+        stack << "#{stack.pop} #{stack.pop} #{token_str}"
+      else
+        stack << token_str
+      end
+      p "After #{token_str} #{stack}"
+    end
+    stack.join(' ')
+  end
+
   private class Identifier
     property chars
 

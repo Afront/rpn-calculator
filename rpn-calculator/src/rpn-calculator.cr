@@ -23,10 +23,10 @@ module RPNCalculator
 
     private def check_notation(expression : String) : Notation
       exp_token = Token.new(expression)
-      exp_array = expression.split.map { |c| c.to_i? }
+      exp_array = expression.split.map { |c| c.to_f? }
       if exp_token.postfix?
         Notation::Postfix
-      elsif (exp_array[0] && exp_array[-1].is_a? Int32) || expression.includes?(')') || exp_array.size == 1
+      elsif (exp_array[0] && exp_array[-1].is_a? Float64) || expression.includes?(')') || exp_array.size == 1
         Notation::Infix
       elsif exp_array[-2..-1].select(nil).empty?
         Notation::Prefix
@@ -49,6 +49,27 @@ module RPNCalculator
     # ```
     # calculate("1 2 +") # => 3
     # ```
+    private def calculate_rpn(input : String) : Float64
+      stack = [] of Token
+
+      input.split.each do |string|
+        token = Token.new(string)
+        raise DivisionByZeroError.new("Error: Attempted dividing by zero") if token == "/" && stack.last == "0"
+        stack << if token.operator?
+          arity = OPS_HASH[token.to_s][:proc].as(Proc).arity.to_i
+
+          raise ArgumentError.new("Error: Not enough arguments!") if stack.size < arity
+          next assign(stack) if token == "="
+          stack, popped_tokens = token_pop(stack, arity)
+          token.operate(popped_tokens)
+        else
+          token
+        end
+      end
+      raise ArgumentError.new("Error: Missing operator!") if stack.size > 1
+      stack.pop.to_f
+    end
+
     private def calculate_rpn(input : String) : Float64
       stack = [] of Token
 
@@ -106,7 +127,7 @@ module RPNCalculator
       when Notation::Infix
         handler.do_shunting_yard input
       when Notation::Prefix
-        input.split.reverse.join(" ")
+        prefix_to_postfix input
       else
         raise "Should not occur"
       end
