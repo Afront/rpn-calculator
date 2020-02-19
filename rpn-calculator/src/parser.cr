@@ -1,4 +1,25 @@
 module Parser
+  enum Notation
+    Infix
+    Prefix
+    Postfix
+  end
+
+  private def check_notation(expression : String) : Notation
+    exp_token = Token.new(expression)
+    exp_array = expression.split.map { |token| token[-1].alphanumeric? }
+    if exp_token.postfix?
+      Notation::Postfix
+    elsif (exp_array[0] && exp_array[-1]) || expression.includes?(')') || exp_array.size == 1
+      Notation::Infix
+    elsif exp_array[-2..-1].select(nil).empty?
+      Notation::Prefix
+    else
+      raise ArgumentError.new("This shouldn't happen!" \
+                              "The expression does not match any of the three notations!")
+    end
+  end
+
   class FactorialOfNegativeIntegersError < Exception
     def initialize(message : String = "Cannot find the factorial of a negative integer")
       super message
@@ -29,6 +50,10 @@ module Parser
 
     def type : Class
       @token.class
+    end
+
+    def arity(tkn : String | Char = token) : Int32
+      OPS_HASH[token.to_s][:proc].as(Proc).arity.to_i
     end
 
     private def alphanumeric?(tkn : String | Char = token) : Bool
@@ -97,8 +122,30 @@ module Parser
       @@var_hash
     end
 
-    def operate(popped_tokens)
-      Token.new(case popped_tokens.size
+    def token_pop(stack : Array(Token)) : Tuple(Array(Token), Tuple(Float64) | Tuple(Float64, Float64) | Tuple(Float64, Float64, Float64))
+      popped_tokens = [] of Float64
+      arity.times { popped_tokens << stack.pop.to_f }
+      # Convert popped_tokens to numbers only -> var to numbers method
+      arg_tuple = case arity
+                  when 1
+                    Tuple(Float64).from(popped_tokens)
+                  when 2
+                    Tuple(Float64, Float64).from(popped_tokens)
+                  when 3
+                    Tuple(Float64, Float64, Float64).from(popped_tokens)
+                  else
+                    raise "Something is wrong with the argument tuple for popping the tokens"
+                  end
+
+      {stack, arg_tuple}
+    end
+
+    def operate(stack : Array(Token)) : Array(Token)
+      raise ArgumentError.new("Error: Not enough arguments!") if stack.size < arity
+
+      stack, popped_tokens = token_pop(stack)
+
+      stack << Token.new(case arity
       when 1
         if token == "!"
           n = popped_tokens[0]
@@ -113,6 +160,7 @@ module Parser
       else
         raise "Something is wrong with the program. Please raise an issue if this occurs"
       end)
+      stack
     end
   end
 
@@ -147,7 +195,7 @@ module Parser
     Subtract
   end
 
-  class ShuntingYardHandler
+  private class ShuntingYardHandler
     property output_s, operator_s, number_s, prev_token, dash_sign_state, curr_token, index, goto_hash, id_s
 
     def initialize
@@ -156,15 +204,15 @@ module Parser
       @operator_s = [] of String
       @number_s = Number.new
       @id_s = Identifier.new
-      @prev_token = ""
-      @curr_token = ""
+      @prev_token = " "
+      @curr_token = " "
       @dash_sign_state = DashSignState::Negative
       @index = 0
       @goto_hash = {} of String => Proc(Bool)
       load_goto_hash
     end
 
-    private def load_goto_hash : Hash
+    def load_goto_hash : Hash
       @goto_hash = {"(" => ->{ goto_open }, ")" => ->{ goto_closed }}
       OPS_HASH.each_key do |op|
         @goto_hash.merge!({op => ->{ goto_operator }})
@@ -173,7 +221,7 @@ module Parser
     end
 
     # or handle_number
-    private def goto_number : Bool
+    def goto_number : Bool
       @operator_s << "*" if @prev_token == ")"
       @prev_token = @curr_token
       @number_s.numbers << @curr_token
@@ -181,7 +229,7 @@ module Parser
     end
 
     # or handle_identifier
-    private def goto_identifier : Bool
+    def goto_identifier : Bool
       @operator_s << "*" if @prev_token == ")" || @prev_token.to_i?
       @prev_token = @curr_token
       @id_s << @curr_token
@@ -189,7 +237,7 @@ module Parser
     end
 
     # or handle_operator
-    private def goto_operator : Bool
+    def goto_operator : Bool
       if dash_sign_state == DashSignState::Negative && ["-", "+"].includes? @curr_token
         @number_s.is_negative ^= true if @curr_token == "-"
       else
@@ -200,7 +248,7 @@ module Parser
       true
     end
 
-    private def goto_open : Bool
+    def goto_open : Bool
       if @prev_token == ")" || @prev_token[-1].alphanumeric?
         handle_precedence unless @operator_s.empty?
         @operator_s << "*"
@@ -210,7 +258,7 @@ module Parser
       true
     end
 
-    private def goto_closed : Bool
+    def goto_closed : Bool
       while @operator_s.last != "("
         @output_s << @operator_s.pop.to_s
       end
@@ -220,7 +268,7 @@ module Parser
       true
     end
 
-    private def handle_precedence : Tuple(Array(String), Array(String))
+    def handle_precedence : Tuple(Array(String), Array(String))
       unless [@operator_s.last, @curr_token].includes? "("
         top_precedence = OPS_HASH[@operator_s.last][:precedence].as(Int32)
         tkn_precedence = OPS_HASH[@curr_token][:precedence].as(Int32)
@@ -234,15 +282,15 @@ module Parser
       {@output_s, @operator_s}
     end
 
-    private def operator? : Bool
+    def operator? : Bool
       OPS_HASH.fetch(@curr_token, false) != false
     end
 
-    private def separator? : Bool
+    def separator? : Bool
       ["(", ")"].includes? @curr_token
     end
 
-    private def whitespace? : Bool
+    def whitespace? : Bool
       @curr_token.strip.empty?
     end
 
@@ -286,19 +334,32 @@ module Parser
     end
   end
 
-  def prefix_to_postfix(input : String) : String
-    stack = [] of String
+  private def prefix_to_postfix(input : String) : String
+    stack = [] of Token
     input.split.reverse_each do |token_str|
-      p "Before #{token_str} #{stack}"
       token = Token.new(token_str)
       if token.operator?
-        stack << "#{stack.pop} #{stack.pop} #{token_str}"
+        stack, popped_tokens = token.token_pop(stack)
+        stack << Token.new "#{popped_tokens.join(" ")} #{token.to_s}"
       else
-        stack << token_str
+        stack << token
       end
-      p "After #{token_str} #{stack}"
     end
-    stack.join(' ')
+    p stack.map { |token| token.to_s }.join(' ')
+  end
+
+  def to_postfix(input : String) : String
+    handler = ShuntingYardHandler.new
+    case check_notation input
+    when Notation::Postfix
+      input
+    when Notation::Infix
+      handler.do_shunting_yard input
+    when Notation::Prefix
+      prefix_to_postfix input
+    else
+      raise "This should not occur! Please raise an issue if it does!"
+    end
   end
 
   private class Identifier

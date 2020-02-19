@@ -14,30 +14,6 @@ module RPNCalculator
   class Calculator
     include Parser
 
-    enum Notation
-      Infix
-      Prefix
-      Postfix
-      Error
-    end
-
-    private def check_notation(expression : String) : Notation
-      exp_token = Token.new(expression)
-      exp_array = expression.split.map { |c| c.to_f? }
-      if exp_token.postfix?
-        Notation::Postfix
-      elsif (exp_array[0] && exp_array[-1].is_a? Float64) || expression.includes?(')') || exp_array.size == 1
-        Notation::Infix
-      elsif exp_array[-2..-1].select(nil).empty?
-        Notation::Prefix
-      else
-        Notation::Infix
-        #        raise "This shouldn't happen!" \
-        #             "The expression does not match any of the three notations!"
-        #        Notation::Error
-      end
-    end
-
     private def assign(stack : Array(Token)) : Array(Token)
       value = stack.pop
       Token.var_hash[stack.pop.to_s] = value.to_f
@@ -54,7 +30,9 @@ module RPNCalculator
 
       input.split.each do |string|
         token = Token.new(string)
-        raise DivisionByZeroError.new("Error: Attempted dividing by zero") if token == "/" && stack.last == "0"
+        p stack.last
+        p "hi"
+        raise DivisionByZeroError.new("Error: Attempted dividing by zero") if token == "/" && ["0", "0.0"].includes?(stack.last)
         stack << if token.operator?
           arity = OPS_HASH[token.to_s][:proc].as(Proc).arity.to_i
 
@@ -72,45 +50,18 @@ module RPNCalculator
 
     private def calculate_rpn(input : String) : Float64
       stack = [] of Token
-
       input.split.each do |string|
         token = Token.new(string)
-        raise DivisionByZeroError.new("Error: Attempted dividing by zero") if token == "/" && stack.last == "0"
-        stack << if token.operator?
-          arity = OPS_HASH[token.to_s][:proc].as(Proc).arity.to_i
-
-          raise ArgumentError.new("Error: Not enough arguments!") if stack.size < arity
+        raise DivisionByZeroError.new("Error: Attempted dividing by zero") if token == "/" && ["0", "0.0"].includes? stack.last.to_s
+        if token.operator?
           next assign(stack) if token == "="
-          stack, popped_tokens = token_pop(stack, arity)
-          token.operate(popped_tokens)
+          stack = token.operate(stack)
         else
-          token
+          stack << token
         end
       end
       raise ArgumentError.new("Error: Missing operator!") if stack.size > 1
       stack.pop.to_f
-    end
-
-    # Calculates the result based on the *input* expression given
-    # ```
-    # calculate("1 2 +") # => 3
-    # ```
-    private def token_pop(stack : Array(Token), arity : Int32) : Tuple(Array(Token), Tuple(Float64) | Tuple(Float64, Float64) | Tuple(Float64, Float64, Float64))
-      popped_tokens = [] of Float64
-      arity.times { popped_tokens << stack.pop.to_f }
-      # Convert popped_tokens to numbers only -> var to numbers method
-      arg_tuple = case arity
-                  when 1
-                    Tuple(Float64).from(popped_tokens)
-                  when 2
-                    Tuple(Float64, Float64).from(popped_tokens)
-                  when 3
-                    Tuple(Float64, Float64, Float64).from(popped_tokens)
-                  else
-                    raise "Something is wrong with the argument tuple for popping the tokens"
-                  end
-
-      {stack, arg_tuple}
     end
 
     private def to_i128?(n : Float64) : Float64 | Int128
@@ -119,18 +70,7 @@ module RPNCalculator
 
     def calculate(input : String) : Float64
       input = input.strip
-      handler = ShuntingYardHandler.new
-
-      calculate_rpn case check_notation input
-      when Notation::Postfix
-        input
-      when Notation::Infix
-        handler.do_shunting_yard input
-      when Notation::Prefix
-        prefix_to_postfix input
-      else
-        raise "Should not occur"
-      end
+      p calculate_rpn to_postfix(input)
     end
 
     def format(input : String) : String
