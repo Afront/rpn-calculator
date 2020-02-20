@@ -99,36 +99,40 @@ module Parser
       # raise "Token is invalid!" if !valid?
     end
 
-    def type : Class
-      @token.class
+    private def valid? : Bool
+      fnumeric? || operator?
     end
 
     def arity(tkn : String | Char = token) : Int32
       OPS_HASH[token.to_s][:proc].as(Proc).arity.to_i
     end
 
-    private def alphanumeric?(tkn : String | Char = token) : Bool
+    def alphanumeric?(tkn : String | Char = token) : Bool
       tkn.to_s.chars.each { |c| return false unless c.alphanumeric? } || true
-    end
-
-    private def float? : Bool
-      type == Float64 || token.as(String).to_f? != nil
     end
 
     def operator?(tkn : String | Char = token) : Bool
       OPS_HASH.fetch(tkn.to_s, false) != false
     end
 
-    private def string? : Bool
-      type == String
+    def separator?(tkn : String | Char = token) : Bool
+      ["(", ")"].includes? token
     end
 
-    private def whitespace?(tkn : String | Char = token) : Bool
+    def whitespace?(tkn : String | Char = token) : Bool
       tkn.to_s.strip.empty?
     end
 
-    private def valid? : Bool
-      alphanumeric? || operator?
+    def type : Class
+      @token.class
+    end
+
+    def float? : Bool
+      type == Float64 || token.as(String).to_f? != nil
+    end
+
+    private def string? : Bool
+      type == String
     end
 
     def check_notation : Notation
@@ -339,18 +343,6 @@ module Parser
       {@output_s, @operator_s}
     end
 
-    def operator? : Bool
-      OPS_HASH.fetch(@curr_token, false) != false
-    end
-
-    def separator? : Bool
-      ["(", ")"].includes? @curr_token
-    end
-
-    def whitespace? : Bool
-      @curr_token.strip.empty?
-    end
-
     # Converts the given *input* expression into a postfix notation expression
     # ```
     # do_shunting_yard("1+2") # => "1 2 +"
@@ -359,9 +351,12 @@ module Parser
       input.split("").each do |token|
         @index += 1
         @curr_token = token
-        next if whitespace?
-        next goto_number if (token.to_i? || token == ".") && @id.empty?
-        next goto_id unless operator? || separator? # Originally token.alphanumeric? before changing token to String
+        tkn = Token.new(token)
+        next if tkn.whitespace?
+        next goto_number if (tkn.float? || tkn.to_s == ".") && @id.empty?
+
+        # Originally token.alphanumeric?
+        next goto_id unless tkn.operator? || tkn.separator?
 
         unless @number.empty?
           @output_s << @number.to_s
