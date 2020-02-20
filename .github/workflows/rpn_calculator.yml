@@ -13,8 +13,6 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: Install dependencies
-      run: |
-        apt-get install lib64readline-dev
-        shards install
+      run: shards install
     - name: Run tests
       run: crystal spec
