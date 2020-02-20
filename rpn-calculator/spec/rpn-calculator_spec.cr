@@ -31,7 +31,7 @@ describe RPNCalculator do
         calc.calculate("1 -2 /").should eq(-0.5)
         calc.calculate("2 1 /").should eq(2.0)
         calc.calculate("100000000 5 ÷").should eq(20000000.0)
-        expect_raises(Error::DivisionByZeroError, "Error: Attempted dividing by zero") do
+        expect_raises(DivisionByZeroError, "Error: Attempted dividing by zero") do
           calc.calculate("10000500 0 / ")
         end
       end
@@ -55,7 +55,7 @@ describe RPNCalculator do
         # calc.calculate("100 !").should eq(93326215443944152681699238856266700490715968264381621468592963895217599993229915608941463976156518286253697920827223758251185210916864000000000000000000000000.0)
         calc.calculate("50 !").should eq(30414093201713378043612608166064768844377641568960512000000000000.0)
         calc.calculate("-0.5 !").should eq(Math.gamma(0.5))
-        expect_raises(Parser::FactorialOfNegativeIntegersError, "Cannot find the factorial of a negative integer") do
+        expect_raises(Error::FactorialOfNegativeIntegersError, "Cannot find the factorial of a negative integer") do
           calc.calculate("-1 !")
         end
       end
@@ -109,7 +109,7 @@ describe RPNCalculator do
         calc.calculate("2 / +1 ").should eq(2.0)
         calc.calculate("100000000 ÷ --5 ").should eq(20000000.0)
         calc.calculate("500/-(-25) ").should eq(20.0)
-        expect_raises(Error::DivisionByZeroError, "Error: Attempted dividing by zero") do
+        expect_raises(DivisionByZeroError, "Error: Attempted dividing by zero") do
           calc.calculate("10000500/--(---0) ")
         end
       end
@@ -180,7 +180,7 @@ describe RPNCalculator do
         calc.calculate("/ 2 1 ").should eq(2.0)
         calc.calculate("÷ 100000000 5").should eq(20000000.0)
 
-        expect_raises(Error::DivisionByZeroError, "Error: Attempted dividing by zero") do
+        expect_raises(DivisionByZeroError, "Error: Attempted dividing by zero") do
           calc.calculate("/ 1000 0 ")
         end
       end

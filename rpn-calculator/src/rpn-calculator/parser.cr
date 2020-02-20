@@ -1,6 +1,15 @@
 require "./error"
 
+# Contains the methods for parsing the three types of expressions: prefix, infix, and postfix.
+# TODO: Refactor code
+# TODO: Support operators with more than one character
+# TODO: Move all the code that is not related to parsing out of this module
 module Parser
+  # Contains the operators of the calculator
+  #
+  # The key is a string instead of a char type in order to allow operators with more than a character (e.g. ==, >=, !=)
+  # Factorial has a higher precedence than exponentiation, which might cause some issues
+  # TODO: Figure out a way to allow more than one procs while keeping OPS_HASH a hash
   OPS_HASH = {
     "+" => {:precedence => 2, :associativity => :left, :proc => ->(b : Float64, a : Float64) { a + b }},
     "-" => {:precedence => 2, :associativity => :left, :proc => ->(b : Float64, a : Float64) { a - b }},
@@ -14,12 +23,16 @@ module Parser
     "!" => {:precedence => 5, :associativity => :right, :proc => ->(n : Float64) { factorial n }},
   }
 
+  # Contains the three types of notation: infix, prefix, and postfix
   private enum Notation
     Infix
     Prefix
     Postfix
   end
 
+  # Converts the *input* that is in prefix notation into postfix notation
+  #
+  # Might move "to_postfix" methods to Token class
   private def self.prefix_to_postfix(input : String) : String
     stack = [] of Token
     input.split.reverse_each do |token_str|
@@ -33,6 +46,9 @@ module Parser
     stack.map { |token| token.to_s }.join(' ')
   end
 
+  # Converts the *input* that is in any notation into postfix notation
+  #
+  # Might move "to_postfix" methods to Token class
   def self.to_postfix(input : String) : String
     handler = ShuntingYardHandler.new
 
@@ -48,36 +64,54 @@ module Parser
     end
   end
 
+  # Contains the number in array form
+  #
+  # It was originally two classes (Number and Identifier), but I decide merging them into one instead of making a base class
+  # Figuring out a way to move it to Token, but I might not do it since Token is already a huge class, which will affect the performance of the program
   private class Number
     property symbols, is_negative
 
+    # Intializes an array of String (instead of char) and a boolean variable
+    #
+    # I might change @symbols to Char, and @is_negative to (1,-1)
+    # I tried changing @is_negative to 1 before, but it did not work (I forgot why)
     def initialize
       @symbols = [] of String
       @is_negative = false
     end
 
+    # Clears the content of symbols and changes is_negative back to false
+    # Basically `Number#initialize`
     def clear : Number
       @symbols.clear
       @is_negative = false
       self
     end
 
+    # Outputs the number as a string
+    #
+    # It has a conditional for 0 to prevent negative zeroes in the program
     def to_s : String
       number = symbols.join.to_s
       (is_negative && number != "0" ? "-" : "") + number
     end
 
+    # Checks if the array is empty, or if the number is nil
+    #
+    # Was planning on making this method called nil?, but I settled for empty?
     def empty? : Bool
       symbols.empty?
     end
 
+    # Pushes a *token* to the array *symbols*
     def <<(token : String) : Number
       symbols << token
       self
     end
   end
 
-  # The token is contained in this class to provide easy methods
+  # Contains the token, which can be manipulated easily with the methods in the class
+  # TODO: Refactor class
   class Token
     include Parser
 
@@ -93,48 +127,158 @@ module Parser
       "φ"   => 0.5 + Math.sqrt(5)/2,
       "ϕ"   => 0.5 + Math.sqrt(5)/2,
     }
+
     @@factorial_memo = {} of Float64 => Float64
 
+    # Initializes the Token object
+    #
+    # Considered raising "Token is invalid!" if the token is not valid
+    # But I decided not to since I ended up using the class for invalid tokens
+    # Which is bad and is probably code smell, so...
+    # TODO: Refactor class
     def initialize(@token)
       # raise "Token is invalid!" if !valid?
     end
 
+    # Checks if the token is valid by checking if it's alphanumeric, an operator, or a bracket
     private def valid? : Bool
-      fnumeric? || operator?
+      alphanumeric? || operator? || bracket?
     end
 
-    def arity(tkn : String | Char = token) : Int32
-      OPS_HASH[token.to_s][:proc].as(Proc).arity.to_i
+    # Checks the arity of the *operator*
+    #
+    # ```
+    # Token.new("-").arity # => 2
+    # Token.new("!").arity # => 1
+    # ```
+    # TODO: Make this method private
+    def arity(operator : String | Char = token) : Int32
+      OPS_HASH[operator.to_s][:proc].as(Proc).arity.to_i
     end
 
+    # Checks if the token is alphanumeric
+    #
+    # ```
+    # Token.new("-").alphanumeric? # => false
+    # Token.new("1").alphanumeric? # => true
+    # Token.new("a").alphanumeric? # => true
+    # # Expressions that should be alphanumeric
+    # Token.new("哈羅").alphanumeric? # => false
+    # Token.new("꧑").alphanumeric?  # => false
+    # Token.new("ᛱ").alphanumeric?  # => false
+    # Token.new("๐").alphanumeric?  # => false
+    # Token.new("空").alphanumeric?  # => false
+    # Token.new("영").alphanumeric?  # => false
+    # Token.new("𘈩").alphanumeric?  # => false
+    # Token.new("〇").alphanumeric?  # => false
+    # ```
+    # TODO: Make this method private
+    # TODO: Add support for other languages or create a new method that allows this
     def alphanumeric?(tkn : String | Char = token) : Bool
       tkn.to_s.chars.each { |c| return false unless c.alphanumeric? } || true
     end
 
+    # Checks if the token is an operator
+    #
+    # ```
+    # Token.new("-").operator?  # => true
+    # Token.new("+").operator?  # => true
+    # Token.new("!").operator?  # => true
+    # Token.new("-1").operator? # => false
+    # Token.new("1").operator?  # => false
+    # Token.new("a").operator?  # => false
+    # Token.new("哈羅").operator? # => false
+    # Token.new("꧑").operator?  # => false
+    # Token.new("ᛱ").operator?  # => false
+    # Token.new("๐").operator?  # => false
+    # Token.new("空").operator?  # => false
+    # Token.new("영").operator?  # => false
+    # Token.new("𘈩").operator?  # => false
+    # Token.new("〇").operator?  # => false
+    # ```
     def operator?(tkn : String | Char = token) : Bool
       OPS_HASH.fetch(tkn.to_s, false) != false
     end
 
-    def separator?(tkn : String | Char = token) : Bool
+    # Checks if the token is a bracket
+    #
+    # ```
+    # Token.new("(").bracket?  # => truee
+    # Token.new(")").bracket?  # => true
+    # Token.new("-").bracket?  # => false
+    # Token.new("+").bracket?  # => false
+    # Token.new("!").bracket?  # => false
+    # Token.new("-1").bracket? # => false
+    # Token.new("1").bracket?  # => false
+    # Token.new("a").bracket?  # => false
+    # ```
+    # TODO: Make this method private
+    def bracket?(tkn : String | Char = token) : Bool
       ["(", ")"].includes? token
     end
 
+    # Checks if the token is whitespace
+    #
+    # ```
+    # Token.new("    ").whitespace? # => true
+    # Token.new(" ").whitespace?    # => true
+    # Token.new("(").whitespace?    # => false
+    # Token.new(")").whitespace?    # => false
+    # Token.new("-").whitespace?    # => false
+    # Token.new("+").whitespace?    # => false
+    # Token.new("!").whitespace?    # => false
+    # Token.new("-1").whitespace?   # => false
+    # Token.new("1").whitespace?    # => false
+    # Token.new("a").whitespace?    # => false
+    # ```
+    # TODO: Make this method private
     def whitespace?(tkn : String | Char = token) : Bool
       tkn.to_s.strip.empty?
     end
 
+    # Checks if the token is a float or a string
+    #
+    # ```
+    # Token.new("a").type?  # => String
+    # Token.new(1).type?    # => Float64
+    # Token.new(12.0).type? # => Float64
+    # ```
+    # TODO: Make this method private
     def type : Class
       @token.class
     end
 
+    # Checks if the token is a float
+    #
+    # ```
+    # Token.new("a").float? # => false
+    # Token.new(1).float?   # => true
+    # Token.new("1").float? # => true
+    # ```
+    # TODO: Make this method private
     def float? : Bool
       type == Float64 || token.as(String).to_f? != nil
     end
 
+    # Checks if the token is a string
+    #
+    # ```
+    # Token.new("a").string? # => false
+    # Token.new(1).string?   # => true
+    # Token.new("1").string? # => true
+    # ```
+    # TODO: Make this method private
     private def string? : Bool
       type == String
     end
 
+    # Checks the notation of the token
+    #
+    # ```
+    # Token.new("+ 1 2").check_notation # => Notation::Prefix
+    # Token.new("1 + 2").check_notation # => Notation::Infix
+    # Token.new("1 2 +").check_notation # => Notation::Postfix
+    # ```
     def check_notation : Notation
       token_str = token.to_s
       exp_array = token_str.split.map { |symbol| symbol[-1].alphanumeric? }
@@ -153,6 +297,14 @@ module Parser
       end
     end
 
+    # Converts the token into a float
+    #
+    # ```
+    # Token.var_hash["a"] = 1
+    # Token.new("3").to_f # => 3
+    # Token.new(2).to_f   # => 2
+    # Token.new("a").to_f # => 1
+    # ```
     def to_f : Float64
       token_arr = token.to_s.chars
       is_negative = 1
@@ -171,22 +323,48 @@ module Parser
       end
     end
 
+    # Converts the token to a string
+    #
+    # ```
+    # Token.new("3").to_s # => "3"
+    # Token.new(2).to_s   # => "2"
+    # Token.new("a").to_s # => "a"
+    # Token.new(3.2).to_s # => "3.2"
+    # ```
     def to_s : String
       token.to_s
     end
 
+    # Checks if the token is equal to the string/char
+    #
+    # ```
+    # Token.new("3") == "2" # => false
+    # Token.new(2) == "2"   # => true
+    # ```
+    # TODO: Add another conditional that checks if the value is the same
     def ==(other : String | Char) : Bool
       token == other.to_s
     end
 
+    # Checks if the token is equal to another token
+    #
+    # ```
+    # Token.new("3") == "2" # => false
+    # Token.new(2) == "2"   # => true
+    # ```
+    # TODO: Add another conditional that checks if the value is the same
     def ==(other : Token) : Bool
       token == Token.token
     end
 
+    # Gets the var_hash
     def self.var_hash
       @@var_hash
     end
 
+    # Pops the token n amount of times where n is the arity of the operator
+    #
+    # TODO: Move this method out of the Token class?
     def token_pop(stack : Array(Token)) : Tuple(Array(Token), Tuple(Float64) | Tuple(Float64, Float64) | Tuple(Float64, Float64, Float64))
       popped_tokens = [] of Float64
       arity.times { popped_tokens << stack.pop.to_f }
@@ -205,6 +383,7 @@ module Parser
       {stack, arg_tuple}
     end
 
+    # Applies the operator to the two operands in the stack
     def operate(stack : Array(Token)) : Array(Token)
       raise ArgumentError.new("Error: Not enough arguments!") if stack.size < arity
 
@@ -233,15 +412,29 @@ module Parser
       stack
     end
 
+    # Assigns the *value* to a variable
     def assign(value : Float64) : Float64
       @@var_hash[token.to_s] = value
     end
   end
 
+  # Checks if the float is actually an integer or not
+  #
+  # ```
+  # Token.int128?(3.0)                                                          # => true
+  # Token.int128?(3.0000000000000000000000000000000000000000000000000000000001) # => true
+  # Token.int128?(3.1)                                                          # => false
+  # ```
   def self.int128?(n : Float64) : Bool
     n.to_f == n.to_i128
   end
 
+  # Finds the factorial of the number, which can be a negative number or a positive number (as long as it's not a negative integer)
+  #
+  # ```
+  # Token.factorial(1) # => 1.0
+  # Token.factorial(2) # => 2.0
+  # ```
   private def self.factorial(n : Float64) : Float64
     if int128?(n)
       raise Error::FactorialOfNegativeIntegersError.new if n < 0
@@ -251,14 +444,19 @@ module Parser
     end
   end
 
+  # Contains two states: if the operator is binary or unary
+  #
+  # TODO: Change DashSignState to State that contains Binary and Unary states
   enum DashSignState
     Negative
     Subtract
   end
 
+  # Contains the methods for the shunting yard algorithm
   private class ShuntingYardHandler
     property output_s, operator_s, number, prev_token, dash_sign_state, curr_token, index, goto_hash, id
 
+    # Intializes the handler
     def initialize
       @hash = {} of String => Float64
       @output_s = [] of String
@@ -273,6 +471,7 @@ module Parser
       load_goto_hash
     end
 
+    # Loads the goto hash
     def load_goto_hash : Hash
       @goto_hash = {"(" => ->{ goto_open }, ")" => ->{ goto_closed }}
       OPS_HASH.each_key do |op|
@@ -281,7 +480,10 @@ module Parser
       @goto_hash
     end
 
-    # or handle_number
+    # Goes to the number "state"
+    #
+    # Originally handle_number because of the stigma against gotos
+    # Had to create a separate method for this to meet the standards for Ameba since the shunting yard alg had a high cyclometric complexity.
     def goto_number : Bool
       @operator_s << "*" if @prev_token == ")"
       @prev_token = @curr_token
@@ -289,7 +491,10 @@ module Parser
       true
     end
 
-    # or handle_id
+    # Goes to the id "state"
+    #
+    # Originally handle_id because of the stigma against gotos
+    # Had to create a separate method for this to meet the standards for Ameba since the shunting yard alg had a high cyclometric complexity.
     def goto_id : Bool
       @operator_s << "*" if @prev_token == ")" || @prev_token.to_i?
       @prev_token = @curr_token
@@ -297,7 +502,10 @@ module Parser
       true
     end
 
-    # or handle_operator
+    # Goes to the operator "state"
+    #
+    # Originally handle_operator because of the stigma against gotos
+    # Had to create a separate method for this to meet the standards for Ameba since the shunting yard alg had a high cyclometric complexity.
     def goto_operator : Bool
       if dash_sign_state == DashSignState::Negative && ["-", "+"].includes? @curr_token
         @number.is_negative ^= true if @curr_token == "-"
@@ -309,6 +517,10 @@ module Parser
       true
     end
 
+    # Goes to the open "state"
+    #
+    # Originally handle_open because of the stigma against gotos
+    # Had to create a separate method for this to meet the standards for Ameba since the shunting yard alg had a high cyclometric complexity.
     def goto_open : Bool
       if @prev_token == ")" || @prev_token[-1].alphanumeric?
         handle_precedence unless @operator_s.empty?
@@ -319,6 +531,10 @@ module Parser
       true
     end
 
+    # Goes to the closed "state"
+    #
+    # Originally handle_closed because of the stigma against gotos
+    # Had to create a separate method for this to meet the standards for Ameba since the shunting yard alg had a high cyclometric complexity.
     def goto_closed : Bool
       while @operator_s.last != "("
         @output_s << @operator_s.pop.to_s
@@ -329,6 +545,9 @@ module Parser
       true
     end
 
+    # Pushes the operators in the operator stack to the output stack depending on the precedence between the operators
+    #
+    # Had to create a separate method for this to meet the standards for Ameba since the shunting yard alg had a high cyclometric complexity.
     def handle_precedence : Tuple(Array(String), Array(String))
       unless [@operator_s.last, @curr_token].includes? "("
         top_precedence = OPS_HASH[@operator_s.last][:precedence].as(Int32)
@@ -343,7 +562,7 @@ module Parser
       {@output_s, @operator_s}
     end
 
-    # Converts the given *input* expression into a postfix notation expression
+    # Converts the given *input* expression that is in infix notation into a postfix expression
     # ```
     # do_shunting_yard("1+2") # => "1 2 +"
     # ```
@@ -356,7 +575,7 @@ module Parser
         next goto_number if (tkn.float? || tkn.to_s == ".") && @id.empty?
 
         # Originally token.alphanumeric?
-        next goto_id unless tkn.operator? || tkn.separator?
+        next goto_id unless tkn.operator? || tkn.bracket?
 
         unless @number.empty?
           @output_s << @number.to_s
@@ -370,7 +589,7 @@ module Parser
           @id.clear
         end
 
-        @goto_hash.fetch(token) { |tkn| raise "Error: Token #{tkn} is not supported yet!" }.call
+        @goto_hash.fetch(token) { |t| raise "Error: Token #{t} is not supported yet!" }.call
         @prev_token = token
       end
 
