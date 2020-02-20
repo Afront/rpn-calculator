@@ -14,7 +14,7 @@ jobs:
     - uses: actions/checkout@v2
     - name: Install dependencies
       run: |
-        apt-get install readline libpcre3
+        apt-get install libreadline6 libpcre3
         shards install
     - name: Run tests
       run: crystal spec
