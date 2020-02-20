@@ -1,6 +1,7 @@
 name: rpn-calculator
+description: |
+A text-based calculator that can evaluate prefix, infix, and postfix expressions
 version: 0.2.0
-
 authors:
   - Afront <3943720+Afront@users.noreply.github.com>
 
