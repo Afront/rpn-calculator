@@ -1,2 +1,2 @@
 require "spec"
-require "../src/rpn-calculator"
+require "../src/rpn-calculator/"

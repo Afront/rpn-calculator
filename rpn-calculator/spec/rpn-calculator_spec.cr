@@ -31,7 +31,7 @@ describe RPNCalculator do
         calc.calculate("1 -2 /").should eq(-0.5)
         calc.calculate("2 1 /").should eq(2.0)
         calc.calculate("100000000 5 ÷").should eq(20000000.0)
-        expect_raises(DivisionByZeroError, "Error: Attempted dividing by zero") do
+        expect_raises(Error::DivisionByZeroError, "Error: Attempted dividing by zero") do
           calc.calculate("10000500 0 / ")
         end
       end
@@ -109,7 +109,7 @@ describe RPNCalculator do
         calc.calculate("2 / +1 ").should eq(2.0)
         calc.calculate("100000000 ÷ --5 ").should eq(20000000.0)
         calc.calculate("500/-(-25) ").should eq(20.0)
-        expect_raises(DivisionByZeroError, "Error: Attempted dividing by zero") do
+        expect_raises(Error::DivisionByZeroError, "Error: Attempted dividing by zero") do
           calc.calculate("10000500/--(---0) ")
         end
       end
@@ -180,7 +180,7 @@ describe RPNCalculator do
         calc.calculate("/ 2 1 ").should eq(2.0)
         calc.calculate("÷ 100000000 5").should eq(20000000.0)
 
-        expect_raises(DivisionByZeroError, "Error: Attempted dividing by zero") do
+        expect_raises(Error::DivisionByZeroError, "Error: Attempted dividing by zero") do
           calc.calculate("/ 1000 0 ")
         end
       end

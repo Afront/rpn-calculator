@@ -1,28 +1,79 @@
+require "./error"
+
 module Parser
-  enum Notation
+  OPS_HASH = {
+    "+" => {:precedence => 2, :associativity => :left, :proc => ->(b : Float64, a : Float64) { a + b }},
+    "-" => {:precedence => 2, :associativity => :left, :proc => ->(b : Float64, a : Float64) { a - b }},
+    "*" => {:precedence => 3, :associativity => :left, :proc => ->(b : Float64, a : Float64) { a * b }},
+    "×" => {:precedence => 3, :associativity => :left, :proc => ->(b : Float64, a : Float64) { a * b }},
+    "/" => {:precedence => 3, :associativity => :left, :proc => ->(b : Float64, a : Float64) { a / b }},
+    "÷" => {:precedence => 3, :associativity => :left, :proc => ->(b : Float64, a : Float64) { a / b }},
+    "%" => {:precedence => 3, :associativity => :left, :proc => ->(b : Float64, a : Float64) { a % b }},
+    "^" => {:precedence => 4, :associativity => :right, :proc => ->(b : Float64, a : Float64) { a ** b }},
+    "=" => {:precedence => 1, :associativity => :left, :proc => ->(b : Float64, a : String) { Token.new(a).assign(b) }},
+    "!" => {:precedence => 5, :associativity => :right, :proc => ->(n : Float64) { factorial n }},
+  }
+
+  private enum Notation
     Infix
     Prefix
     Postfix
   end
 
-  private def check_notation(expression : String) : Notation
-    exp_token = Token.new(expression)
-    exp_array = expression.split.map { |token| token[-1].alphanumeric? }
-    if exp_token.postfix?
-      Notation::Postfix
-    elsif (exp_array[0] && exp_array[-1]) || expression.includes?(')') || exp_array.size == 1
-      Notation::Infix
-    elsif exp_array[-2..-1].select(nil).empty?
-      Notation::Prefix
+  private def self.prefix_to_postfix(input : String) : String
+    stack = [] of Token
+    input.split.reverse_each do |token_str|
+      token = Token.new(token_str)
+      stack << if token.operator?
+        Token.new "#{1.upto(token.arity).map { stack.pop.to_s }.join(" ")} #{token.to_s}"
+      else
+        token
+      end
+    end
+    stack.map { |token| token.to_s }.join(' ')
+  end
+
+  def self.to_postfix(input : String) : String
+    handler = ShuntingYardHandler.new
+
+    case Token.new(input).check_notation
+    when Notation::Postfix
+      input
+    when Notation::Infix
+      handler.do_shunting_yard input
+    when Notation::Prefix
+      prefix_to_postfix input
     else
-      raise ArgumentError.new("This shouldn't happen!" \
-                              "The expression does not match any of the three notations!")
+      ""
     end
   end
 
-  class FactorialOfNegativeIntegersError < Exception
-    def initialize(message : String = "Cannot find the factorial of a negative integer")
-      super message
+  private class Number
+    property symbols, is_negative
+
+    def initialize
+      @symbols = [] of String
+      @is_negative = false
+    end
+
+    def clear : Number
+      @symbols.clear
+      @is_negative = false
+      self
+    end
+
+    def to_s : String
+      number = symbols.join.to_s
+      (is_negative && number != "0" ? "-" : "") + number
+    end
+
+    def empty? : Bool
+      symbols.empty?
+    end
+
+    def <<(token : String) : Number
+      symbols << token
+      self
     end
   end
 
@@ -80,12 +131,22 @@ module Parser
       alphanumeric? || operator?
     end
 
-    def postfix? : Bool
+    def check_notation : Notation
       token_str = token.to_s
-      ((token_str[0].alphanumeric? ||
-        ['-', '+'].includes? token_str[0]) &&
-        (operator? token_str[-1]) &&
-        token_str[-2].whitespace?)
+      exp_array = token_str.split.map { |symbol| symbol[-1].alphanumeric? }
+
+      if ((token_str[0].alphanumeric? ||
+         ['-', '+'].includes? token_str[0]) &&
+         (operator? token_str[-1]) &&
+         token_str[-2].whitespace?)
+        Notation::Postfix
+      elsif (exp_array[0] && exp_array[-1]) || token_str.includes?(')') || exp_array.size == 1
+        Notation::Infix
+      elsif exp_array[-2..-1].select(nil).empty?
+        Notation::Prefix
+      else
+        raise ArgumentError.new "This should not occur! Please raise an issue if it does!"
+      end
     end
 
     def to_f : Float64
@@ -179,25 +240,12 @@ module Parser
 
   private def self.factorial(n : Float64) : Float64
     if int128?(n)
-      raise FactorialOfNegativeIntegersError.new if n < 0
+      raise Error::FactorialOfNegativeIntegersError.new if n < 0
       (1..n.to_i).reduce(1.0) { |a, b| a*b*1.0 }
     else
       Math.gamma(n + 1)
     end
   end
-
-  OPS_HASH = {
-    "+" => {:precedence => 2, :associativity => :left, :proc => ->(b : Float64, a : Float64) { a + b }},
-    "-" => {:precedence => 2, :associativity => :left, :proc => ->(b : Float64, a : Float64) { a - b }},
-    "*" => {:precedence => 3, :associativity => :left, :proc => ->(b : Float64, a : Float64) { a * b }},
-    "×" => {:precedence => 3, :associativity => :left, :proc => ->(b : Float64, a : Float64) { a * b }},
-    "/" => {:precedence => 3, :associativity => :left, :proc => ->(b : Float64, a : Float64) { a / b }},
-    "÷" => {:precedence => 3, :associativity => :left, :proc => ->(b : Float64, a : Float64) { a / b }},
-    "%" => {:precedence => 3, :associativity => :left, :proc => ->(b : Float64, a : Float64) { a % b }},
-    "^" => {:precedence => 4, :associativity => :right, :proc => ->(b : Float64, a : Float64) { a ** b }},
-    "=" => {:precedence => 1, :associativity => :left, :proc => ->(b : Float64, a : String) { Token.new(a).assign(b) }},
-    "!" => {:precedence => 5, :associativity => :right, :proc => ->(n : Float64) { factorial n }},
-  }
 
   enum DashSignState
     Negative
@@ -205,14 +253,14 @@ module Parser
   end
 
   private class ShuntingYardHandler
-    property output_s, operator_s, number_s, prev_token, dash_sign_state, curr_token, index, goto_hash, id_s
+    property output_s, operator_s, number, prev_token, dash_sign_state, curr_token, index, goto_hash, id
 
     def initialize
       @hash = {} of String => Float64
       @output_s = [] of String
       @operator_s = [] of String
-      @number_s = Number.new
-      @id_s = Identifier.new
+      @number = Number.new
+      @id = Number.new
       @prev_token = " "
       @curr_token = " "
       @dash_sign_state = DashSignState::Negative
@@ -226,29 +274,29 @@ module Parser
       OPS_HASH.each_key do |op|
         @goto_hash.merge!({op => ->{ goto_operator }})
       end
-      goto_hash
+      @goto_hash
     end
 
     # or handle_number
     def goto_number : Bool
       @operator_s << "*" if @prev_token == ")"
       @prev_token = @curr_token
-      @number_s.numbers << @curr_token
+      @number.symbols << @curr_token
       true
     end
 
-    # or handle_identifier
-    def goto_identifier : Bool
+    # or handle_id
+    def goto_id : Bool
       @operator_s << "*" if @prev_token == ")" || @prev_token.to_i?
       @prev_token = @curr_token
-      @id_s << @curr_token
+      @id << @curr_token
       true
     end
 
     # or handle_operator
     def goto_operator : Bool
       if dash_sign_state == DashSignState::Negative && ["-", "+"].includes? @curr_token
-        @number_s.is_negative ^= true if @curr_token == "-"
+        @number.is_negative ^= true if @curr_token == "-"
       else
         handle_precedence unless @operator_s.empty?
         @operator_s << @curr_token
@@ -312,27 +360,27 @@ module Parser
         @index += 1
         @curr_token = token
         next if whitespace?
-        next goto_number if (token.to_i? || token == ".") && @id_s.empty?
-        next goto_identifier unless operator? || separator? # Originally token.alphanumeric? before changing token to String
+        next goto_number if (token.to_i? || token == ".") && @id.empty?
+        next goto_id unless operator? || separator? # Originally token.alphanumeric? before changing token to String
 
-        unless @number_s.empty?
-          @output_s << @number_s.to_s
+        unless @number.empty?
+          @output_s << @number.to_s
           @dash_sign_state = DashSignState::Subtract
-          @number_s.clear
+          @number.clear
         end
 
-        unless @id_s.empty?
-          @output_s << @id_s.to_s
+        unless @id.empty?
+          @output_s << @id.to_s
           @dash_sign_state = DashSignState::Subtract
-          @id_s.clear
+          @id.clear
         end
 
-        @goto_hash.fetch(token) { |tkn| raise "Token #{tkn} is not supported yet" }.call
+        @goto_hash.fetch(token) { |tkn| raise "Error: Token #{tkn} is not supported yet!" }.call
         @prev_token = token
       end
 
-      @output_s << @number_s.to_s unless @number_s.empty?
-      @output_s << @id_s.to_s unless @id_s.empty?
+      @output_s << @number.to_s unless @number.empty?
+      @output_s << @id.to_s unless @id.empty?
 
       until @operator_s.empty?
         raise "Parentheses Error: Missing ')' at the end!" if @operator_s.last == "("
@@ -340,90 +388,6 @@ module Parser
       end
 
       @output_s.join(" ")
-    end
-  end
-
-  private def prefix_to_postfix(input : String) : String
-    stack = [] of Token
-    input.split.reverse_each do |token_str|
-      token = Token.new(token_str)
-      stack << if token.operator?
-        Token.new "#{1.upto(token.arity).map { stack.pop.to_s }.join(" ")} #{token.to_s}"
-      else
-        token
-      end
-    end
-    stack.map { |token| token.to_s }.join(' ')
-  end
-
-  def to_postfix(input : String) : String
-    handler = ShuntingYardHandler.new
-    case check_notation input
-    when Notation::Postfix
-      input
-    when Notation::Infix
-      handler.do_shunting_yard input
-    when Notation::Prefix
-      prefix_to_postfix input
-    else
-      raise "This should not occur! Please raise an issue if it does!"
-    end
-  end
-
-  private class Identifier
-    property chars
-
-    def initialize
-      @chars = [] of String
-      @is_negative = false
-    end
-
-    def clear : Identifier
-      @chars.clear
-      @is_negative = false
-      self
-    end
-
-    def to_s : String
-      (@is_negative ? "-" : "") + @chars.join.to_s
-    end
-
-    def empty? : Bool
-      @chars.empty?
-    end
-
-    def <<(token : String) : Identifier
-      @chars << token
-      self
-    end
-  end
-
-  private class Number
-    property numbers, is_negative
-
-    def initialize
-      @numbers = [] of String
-      @is_negative = false
-    end
-
-    def clear : Number
-      @numbers.clear
-      @is_negative = false
-      self
-    end
-
-    def to_s : String
-      num_string = numbers.join.to_s
-      (@is_negative && num_string != "0" ? "-" : "") + num_string
-    end
-
-    def empty? : Bool
-      @numbers.empty?
-    end
-
-    def <<(token : String) : Number
-      @numbers << token
-      self
     end
   end
 end
