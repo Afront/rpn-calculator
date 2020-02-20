@@ -8,7 +8,7 @@ require "./rpn-calculator/*"
 # Since this is pretty much identical to rpn-calculator-automata, I might merge them back together
 # TODO: Add documentation
 module RPNCalculator
-  VERSION = "0.2.4"
+  VERSION = "0.3.0"
 
   extend Error
 
