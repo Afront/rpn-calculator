@@ -1,5 +1,5 @@
 require "colorize"
-require "readline"
+require "fancyline"
 require "./rpn-calculator/*"
 
 # RPNCalculator is a calculator that uses the postfix notation.
@@ -8,7 +8,8 @@ require "./rpn-calculator/*"
 # Since this is pretty much identical to rpn-calculator-automata, I might merge them back together
 # TODO: Add documentation
 module RPNCalculator
-  VERSION = "0.3.0"
+  VERSION      = "0.3.0"
+  HISTORY_FILE = "#{Dir.current}/.history.log"
 
   extend Error
 
@@ -58,13 +59,30 @@ module RPNCalculator
     # repl # => >
     # ```
     def repl
-      until ["abort", "exit", "quit", "q"].includes?(input = (Readline.readline(prompt: "> ", add_history: true) || "").to_s)
-        begin
-          next if input.strip.empty?
-          puts format input
-        rescue error_msg : Exception
-          puts error_msg.colorize(:red) # , error_msg.backtrace
+      shell = Fancyline.new
+
+      if File.exists? HISTORY_FILE
+        File.open(HISTORY_FILE, "r") do |io|
+          shell.history.load io
         end
+      end
+
+      begin
+        puts "Welcome to rpl-calculator!"
+        until ["abort", "exit", "quit", "q"].includes?(input = (shell.readline("> ") || "").to_s)
+          begin
+            next if input.strip.empty?
+            puts format input
+          rescue error_msg : Exception
+            puts error_msg.colorize(:red) # , error_msg.backtrace
+          end
+        end
+      rescue interrupt : Fancyline::Interrupt
+        puts "See you next time!"
+      end
+
+      File.open(HISTORY_FILE, "w") do |io| # So open it writable
+        shell.history.save io              # And save.  That's it.
       end
     end
   end

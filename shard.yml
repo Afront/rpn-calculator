@@ -1,6 +1,6 @@
 name: rpn-calculator
 description: |
-A text-based calculator that can evaluate prefix, infix, and postfix expressions
+  A text-based calculator that can evaluate prefix, infix, and postfix expressions
 version: 0.2.0
 authors:
   - Afront <3943720+Afront@users.noreply.github.com>
@@ -10,9 +10,9 @@ targets:
     main: src/rpn-calculator.cr
 
 dependencies:
-  readline:
-    github: crystal-lang/crystal-readline
-
+  fancyline:
+    github: Papierkorb/fancyline
+    
 development_dependencies:
   ameba:
     github: crystal-ameba/ameba
