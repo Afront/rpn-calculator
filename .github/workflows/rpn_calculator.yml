@@ -13,8 +13,6 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: Install dependencies
-      run: |
-        sudo apt-get install readline libpcre3
-        shards install
+      run: shards install
     - name: Run tests
       run: crystal spec
