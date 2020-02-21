@@ -61,6 +61,29 @@ module RPNCalculator
     def repl
       shell = Fancyline.new
 
+      shell.display.add do |ctx, line, yielder|
+        # We underline command names
+        line = line.gsub(/((\+|-|\*|\/|%|\^|!|=)?)(\s*)((-*|\+*)\d+\.?\d*)/) do
+          "#{$1.colorize(Colorize::ColorRGB.new(255, 121, 198))}#{$3}#{$4.colorize(Colorize::ColorRGB.new(181, 147, 249))}"
+        end
+          .gsub(/(\(|\))/, &.colorize(:white).mode(:underline))
+          .gsub(/[a-zA-z]+\d*[a-zA-z]+/, &.colorize(Colorize::ColorRGB.new(102, 217, 239)))
+
+        #          .gsub(/(\+|-|\*|\/|%|\^|!|=)/, &.colorize(Colorize::ColorRGB.new(255, 121, 198)))
+        #        gsub(/((-|\+)?\d+\.?\d*)/, &.colorize(Colorize::ColorRGB.new(181, 147, 249)))
+
+        #        line.gsub(/^\w+/, &.colorize.mode(:underline))
+        #         .gsub(/(\|\s*)(\w+)/) do
+        #          "#{$1}#{$2.colorize.mode(:underline)}"
+        #       end
+        #
+        # .gsub(/(\(|\))/, &.colorize(:white).mode(:underline))
+        # .gsub(/(\+|-|\*|\/|%|\^|!|=)/, &.colorize(Colorize::ColorRGB.new(255, 121, 198)))
+        #          .gsub(/\w+/, &.colorize(Colorize::ColorRGB.new(102, 217, 239)))
+
+        yielder.call ctx, line
+      end
+
       if File.exists? HISTORY_FILE
         File.open(HISTORY_FILE, "r") do |io|
           shell.history.load io
