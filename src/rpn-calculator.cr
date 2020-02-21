@@ -88,5 +88,7 @@ module RPNCalculator
   end
 end
 
-calc = RPNCalculator::Calculator.new
-calc.repl
+{% if !flag?(:spec) %}
+  calc = RPNCalculator::Calculator.new
+  calc.repl
+{% end %}

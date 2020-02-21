@@ -1,9 +1,6 @@
 require "./spec_helper"
 
-include RPNCalculator
-
 describe RPNCalculator do
-  # TODO: Write tests
   describe "#calculate" do
     calc = RPNCalculator::Calculator.new
 
