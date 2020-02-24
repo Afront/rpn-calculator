@@ -60,14 +60,27 @@ module RPNCalculator
     # ```
     def repl
       shell = Fancyline.new
+      identifier_regex = /[a-zA-z]+\d*[a-zA-z]*/
+      value_regex = /\d+\.?\d*/
+      number_regex = /(-*|\+*)#{identifier_regex} | #{value_regex}/
+      op_regex = /(\+|-|\*|\/|%|\^|!|=)?/
+      whitespace = /(\s*)/
+      calc_regex = /((#{number_regex})(#{whitespace}))(#{op_regex})(#{whitespace})(#{number_regex})(#{whitespace})/
 
+      # (+|-)?
+
+      lavender = Colorize::ColorRGB.new(181, 147, 249)
+      light_blue = Colorize::ColorRGB.new(102, 217, 239)
+      pink = Colorize::ColorRGB.new(255, 121, 198)
+      p calc_regex
       shell.display.add do |ctx, line, yielder|
-        # We underline command names
-        line = line.gsub(/((\+|-|\*|\/|%|\^|!|=)?)(\s*)((-*|\+*)\d+\.?\d*)/) do
-          "#{$1.colorize(Colorize::ColorRGB.new(255, 121, 198))}#{$3}#{$4.colorize(Colorize::ColorRGB.new(181, 147, 249))}"
+        line = line.gsub(calc_regex) do
+          p calc_regex.name_table
+
+          "#{$1.colorize(pink)}#{$3}#{$4.colorize(lavender)}"
         end
           .gsub(/(\(|\))/, &.colorize(:white).mode(:underline))
-          .gsub(/[a-zA-z]+\d*[a-zA-z]+/, &.colorize(Colorize::ColorRGB.new(102, 217, 239)))
+          .gsub(/[a-zA-z]+\d*[a-zA-z]*/, &.colorize(light_blue))
 
         #          .gsub(/(\+|-|\*|\/|%|\^|!|=)/, &.colorize(Colorize::ColorRGB.new(255, 121, 198)))
         #        gsub(/((-|\+)?\d+\.?\d*)/, &.colorize(Colorize::ColorRGB.new(181, 147, 249)))

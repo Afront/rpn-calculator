@@ -11,16 +11,16 @@ module Parser
   # Factorial has a higher precedence than exponentiation, which might cause some issues
   # TODO: Figure out a way to allow more than one procs while keeping OPS_HASH a hash
   OPS_HASH = {
-    "+" => {:precedence => 2, :associativity => :left, :proc => ->(b : Float64, a : Float64) { a + b }},
-    "-" => {:precedence => 2, :associativity => :left, :proc => ->(b : Float64, a : Float64) { a - b }},
-    "*" => {:precedence => 3, :associativity => :left, :proc => ->(b : Float64, a : Float64) { a * b }},
-    "×" => {:precedence => 3, :associativity => :left, :proc => ->(b : Float64, a : Float64) { a * b }},
-    "/" => {:precedence => 3, :associativity => :left, :proc => ->(b : Float64, a : Float64) { a / b }},
-    "÷" => {:precedence => 3, :associativity => :left, :proc => ->(b : Float64, a : Float64) { a / b }},
-    "%" => {:precedence => 3, :associativity => :left, :proc => ->(b : Float64, a : Float64) { a % b }},
-    "^" => {:precedence => 4, :associativity => :right, :proc => ->(b : Float64, a : Float64) { a ** b }},
-    "=" => {:precedence => 1, :associativity => :left, :proc => ->(b : Float64, a : String) { Token.new(a).assign(b) }},
-    "!" => {:precedence => 5, :associativity => :right, :proc => ->(n : Float64) { factorial n }},
+    "+" => {:precedence => 2, :associativity => :left, :proc => ->(stack : Array(Token)) { stack.pop + stack.pop }},
+    "-" => {:precedence => 2, :associativity => :left, :proc => ->(stack : Array(Token)) { -stack.pop + stack.pop }},
+    "*" => {:precedence => 3, :associativity => :left, :proc => ->(stack : Array(Token)) { stack.pop * stack.pop }},
+    "×" => {:precedence => 3, :associativity => :left, :proc => ->(stack : Array(Token)) { stack.pop * stack.pop }},
+    "/" => {:precedence => 3, :associativity => :left, :proc => ->(stack : Array(Token)) { stack.pop / stack.pop }},
+    "÷" => {:precedence => 3, :associativity => :left, :proc => ->(stack : Array(Token)) { stack.pop % stack.pop }},
+    "%" => {:precedence => 3, :associativity => :left, :proc => ->(stack : Array(Token)) { stack.pop % stack.pop }},
+    "^" => {:precedence => 4, :associativity => :right, :proc => ->(stack : Array(Token)) { stack.pop ** stack.pop }},
+    "=" => {:precedence => 1, :associativity => :left, :proc => ->(stack : Array(Token)) { stack.pop.assign(stack.pop) }},
+    "!" => {:precedence => 5, :associativity => :right, :proc => ->(stack : Array(Token)) { factorial stack.pop }},
   }
 
   # Contains the three types of notation: infix, prefix, and postfix
@@ -128,7 +128,7 @@ module Parser
       "ϕ"   => 0.5 + Math.sqrt(5)/2,
     }
 
-    @@factorial_memo = {} of Float64 => Float64
+    @@factorial_memo = {} of Token => Float64
 
     # Initializes the Token object
     #
@@ -354,33 +354,12 @@ module Parser
     # ```
     # TODO: Add another conditional that checks if the value is the same
     def ==(other : Token) : Bool
-      token == Token.token
+      token == other.token
     end
 
     # Gets the var_hash
     def self.var_hash
       @@var_hash
-    end
-
-    # Pops the token n amount of times where n is the arity of the operator
-    #
-    # TODO: Move this method out of the Token class?
-    def token_pop(stack : Array(Token)) : Tuple(Array(Token), Tuple(Float64) | Tuple(Float64, Float64) | Tuple(Float64, Float64, Float64))
-      popped_tokens = [] of Float64
-      arity.times { popped_tokens << stack.pop.to_f }
-      # Convert popped_tokens to numbers only -> var to numbers method
-      arg_tuple = case arity
-                  when 1
-                    Tuple(Float64).from(popped_tokens)
-                  when 2
-                    Tuple(Float64, Float64).from(popped_tokens)
-                  when 3
-                    Tuple(Float64, Float64, Float64).from(popped_tokens)
-                  else
-                    raise "Something is wrong with the argument tuple for popping the tokens"
-                  end
-
-      {stack, arg_tuple}
     end
 
     # Applies the operator to the two operands in the stack
@@ -389,21 +368,18 @@ module Parser
 
       if token == "="
         value = stack.pop.to_f
-        return stack << Token.new(stack.pop.assign(value))
+        return stack << Token.new(stack.pop.assign(Token.new(value)))
       end
-
-      stack, popped_tokens = token_pop(stack)
 
       stack << Token.new(case arity
       when 1
         if token == "!"
-          n = popped_tokens[0]
-          @@factorial_memo[n.to_f] ||= OPS_HASH[token.to_s][:proc].as(Proc(Float64, Float64)).call(n.to_f).to_f
+          @@factorial_memo[stack.last] ||= OPS_HASH[token.to_s][:proc].as(Proc(Array(Token), Float64)).call(stack)
         else
-          OPS_HASH[token.to_s[0]][:proc].as(Proc(Float64, Float64)).call(*popped_tokens.as(Tuple(Float64)))
+          OPS_HASH[token.to_s][:proc].as(Proc(Array(Token), Float64)).call(stack).to_f.as(Float64)
         end
       when 2
-        OPS_HASH[token.to_s][:proc].as(Proc(Float64, Float64, Float64)).call(*popped_tokens.as(Tuple(Float64, Float64)))
+        OPS_HASH[token.to_s][:proc].as(Proc(Array(Token), Float64)).call(stack).to_f.as(Float64)
         # when 3
         # OPS_HASH[token[0].to_s][:proc].as(Proc(Float64, Float64, Float64, Float64)).call(*popped_tokens.as(Tuple(Float64, Float64, Float64)))
       else
@@ -413,8 +389,41 @@ module Parser
     end
 
     # Assigns the *value* to a variable
-    def assign(value : Float64) : Float64
-      @@var_hash[token.to_s] = value
+    def assign(value : Token) : Float64
+      @@var_hash[token.to_s] = value.to_f
+    end
+
+    # Assigns the *value* to a variable
+    def +(other : Token) : Token
+      Token.new(to_f + other.to_f)
+    end
+
+    def - : Token
+      Token.new(-to_f)
+    end
+
+    def -(other : Token) : Token
+      Token.new(to_f - other.to_f)
+    end
+
+    def *(other : Token) : Token
+      Token.new(to_f * other.to_f)
+    end
+
+    def /(other : Int32 | Float64) : Token
+      Token.new(to_f / other)
+    end
+
+    def /(other : Token) : Token
+      Token.new(to_f / other.to_f)
+    end
+
+    def %(other : Token) : Token
+      Token.new(to_f % other.to_f)
+    end
+
+    def **(other : Token) : Token
+      Token.new(to_f ** other.to_f)
     end
   end
 
@@ -435,13 +444,14 @@ module Parser
   # Token.factorial(1) # => 1.0
   # Token.factorial(2) # => 2.0
   # ```
-  private def self.factorial(n : Float64) : Float64
-    if int128?(n)
-      raise Error::FactorialOfNegativeIntegersError.new if n < 0
-      (1..n.to_i).reduce(1.0) { |a, b| a*b*1.0 }
-    else
-      Math.gamma(n + 1)
-    end
+  private def self.factorial(n : Token) : Token
+    Token.new(
+      if int128?(n.to_f)
+        raise Error::FactorialOfNegativeIntegersError.new if n.to_f < 0
+        (1..n.to_f.to_i).reduce(1.0) { |a, b| a*b*1.0 }
+      else
+        Math.gamma(n.to_f.to_i + 1)
+      end)
   end
 
   # Contains two states: if the operator is binary or unary
