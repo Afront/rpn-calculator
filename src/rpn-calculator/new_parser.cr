@@ -3,8 +3,12 @@ require "./error"
 # Contains the methods for parsing the three types of expressions: prefix, infix, and postfix.
 module Parser
   struct NotationStruct
-    getter? infix : Bool { }
-    getter? prefix : Bool { }
+    def initialize(expression : String)
+      expression.strip
+    end
+
+    getter? infix : Bool { (expression[0].to_i? && expression[-1]).to_i? || expression.includes?(')') || expression.size == 1 }
+    getter? prefix : Bool { expression[-2..-1].select(nil).empty? }
     getter? postfix : Bool { }
   end
 
@@ -13,7 +17,7 @@ module Parser
     Prefix
     Postfix
 
-    def self.new(string : String)
+    def self.new(expression : String)
     end
 
     def to_s
